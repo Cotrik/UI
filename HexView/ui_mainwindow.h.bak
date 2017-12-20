@@ -1,0 +1,162 @@
+/********************************************************************************
+** Form generated from reading UI file 'mainwindow.ui'
+**
+** Created by: Qt User Interface Compiler version 4.8.6
+**
+** WARNING! All changes made in this file will be lost when recompiling UI file!
+********************************************************************************/
+
+#ifndef UI_MAINWINDOW_H
+#define UI_MAINWINDOW_H
+
+#include <QtCore/QVariant>
+#include <QtGui/QAction>
+#include <QtGui/QApplication>
+#include <QtGui/QButtonGroup>
+#include <QtGui/QComboBox>
+#include <QtGui/QDockWidget>
+#include <QtGui/QDoubleSpinBox>
+#include <QtGui/QHeaderView>
+#include <QtGui/QLabel>
+#include <QtGui/QListWidget>
+#include <QtGui/QMainWindow>
+#include <QtGui/QMenuBar>
+#include <QtGui/QSlider>
+#include <QtGui/QStatusBar>
+#include <QtGui/QToolBar>
+#include <QtGui/QTreeWidget>
+#include <QtGui/QWidget>
+#include "QVTKWidget.h"
+
+QT_BEGIN_NAMESPACE
+
+class Ui_MainWindow
+{
+public:
+    QWidget *centralwidget;
+    QVTKWidget *qvtkWidget;
+    QListWidget *sheetListWidget;
+    QListWidget *componentListWidget;
+    QSlider *sheetOpacitySlider;
+    QLabel *label;
+    QDoubleSpinBox *sheetOpacitySpinBox;
+    QDoubleSpinBox *componentOpacitySpinBox;
+    QSlider *componentOpacitySlider;
+    QLabel *label_2;
+    QComboBox *componentDisplayComboBox;
+    QComboBox *sheetDisplayComboBox;
+    QComboBox *sheetCellDataFieldComboBox;
+    QTreeWidget *treeWidget;
+    QMenuBar *menuBar;
+    QToolBar *mainToolBar;
+    QStatusBar *statusBar;
+    QDockWidget *dockWidget;
+    QWidget *dockWidgetContents;
+
+    void setupUi(QMainWindow *MainWindow)
+    {
+        if (MainWindow->objectName().isEmpty())
+            MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
+        MainWindow->resize(1920, 1080);
+        QIcon icon;
+        icon.addFile(QString::fromUtf8("../icon/hex.png"), QSize(), QIcon::Normal, QIcon::Off);
+        MainWindow->setWindowIcon(icon);
+        MainWindow->setIconSize(QSize(22, 22));
+        centralwidget = new QWidget(MainWindow);
+        centralwidget->setObjectName(QString::fromUtf8("centralwidget"));
+        qvtkWidget = new QVTKWidget(centralwidget);
+        qvtkWidget->setObjectName(QString::fromUtf8("qvtkWidget"));
+        qvtkWidget->setGeometry(QRect(10, 0, 1460, 1000));
+        sheetListWidget = new QListWidget(centralwidget);
+        sheetListWidget->setObjectName(QString::fromUtf8("sheetListWidget"));
+        sheetListWidget->setGeometry(QRect(1480, 99, 221, 450));
+        sheetListWidget->setResizeMode(QListView::Adjust);
+        componentListWidget = new QListWidget(centralwidget);
+        componentListWidget->setObjectName(QString::fromUtf8("componentListWidget"));
+        componentListWidget->setGeometry(QRect(1705, 99, 201, 901));
+        componentListWidget->setResizeMode(QListView::Adjust);
+        sheetOpacitySlider = new QSlider(centralwidget);
+        sheetOpacitySlider->setObjectName(QString::fromUtf8("sheetOpacitySlider"));
+        sheetOpacitySlider->setGeometry(QRect(1550, 32, 71, 21));
+        sheetOpacitySlider->setMinimum(0);
+        sheetOpacitySlider->setMaximum(100);
+        sheetOpacitySlider->setValue(100);
+        sheetOpacitySlider->setOrientation(Qt::Horizontal);
+        label = new QLabel(centralwidget);
+        label->setObjectName(QString::fromUtf8("label"));
+        label->setGeometry(QRect(1490, 32, 67, 17));
+        sheetOpacitySpinBox = new QDoubleSpinBox(centralwidget);
+        sheetOpacitySpinBox->setObjectName(QString::fromUtf8("sheetOpacitySpinBox"));
+        sheetOpacitySpinBox->setGeometry(QRect(1620, 30, 71, 27));
+        sheetOpacitySpinBox->setMaximum(1);
+        sheetOpacitySpinBox->setValue(1);
+        componentOpacitySpinBox = new QDoubleSpinBox(centralwidget);
+        componentOpacitySpinBox->setObjectName(QString::fromUtf8("componentOpacitySpinBox"));
+        componentOpacitySpinBox->setGeometry(QRect(1830, 30, 71, 27));
+        componentOpacitySpinBox->setMaximum(1);
+        componentOpacitySpinBox->setValue(1);
+        componentOpacitySlider = new QSlider(centralwidget);
+        componentOpacitySlider->setObjectName(QString::fromUtf8("componentOpacitySlider"));
+        componentOpacitySlider->setGeometry(QRect(1760, 32, 71, 21));
+        componentOpacitySlider->setMinimum(0);
+        componentOpacitySlider->setMaximum(100);
+        componentOpacitySlider->setValue(100);
+        componentOpacitySlider->setOrientation(Qt::Horizontal);
+        label_2 = new QLabel(centralwidget);
+        label_2->setObjectName(QString::fromUtf8("label_2"));
+        label_2->setGeometry(QRect(1700, 32, 67, 17));
+        componentDisplayComboBox = new QComboBox(centralwidget);
+        componentDisplayComboBox->setObjectName(QString::fromUtf8("componentDisplayComboBox"));
+        componentDisplayComboBox->setGeometry(QRect(1700, 0, 201, 27));
+        sheetDisplayComboBox = new QComboBox(centralwidget);
+        sheetDisplayComboBox->setObjectName(QString::fromUtf8("sheetDisplayComboBox"));
+        sheetDisplayComboBox->setGeometry(QRect(1490, 0, 201, 27));
+        sheetCellDataFieldComboBox = new QComboBox(centralwidget);
+        sheetCellDataFieldComboBox->setObjectName(QString::fromUtf8("sheetCellDataFieldComboBox"));
+        sheetCellDataFieldComboBox->setGeometry(QRect(1490, 60, 201, 27));
+        treeWidget = new QTreeWidget(centralwidget);
+        QTreeWidgetItem *__qtreewidgetitem = new QTreeWidgetItem();
+        __qtreewidgetitem->setText(0, QString::fromUtf8("1"));
+        treeWidget->setHeaderItem(__qtreewidgetitem);
+        treeWidget->setObjectName(QString::fromUtf8("treeWidget"));
+        treeWidget->setGeometry(QRect(1480, 550, 221, 450));
+        MainWindow->setCentralWidget(centralwidget);
+        menuBar = new QMenuBar(MainWindow);
+        menuBar->setObjectName(QString::fromUtf8("menuBar"));
+        menuBar->setGeometry(QRect(0, 0, 1920, 20));
+        MainWindow->setMenuBar(menuBar);
+        mainToolBar = new QToolBar(MainWindow);
+        mainToolBar->setObjectName(QString::fromUtf8("mainToolBar"));
+        MainWindow->addToolBar(Qt::TopToolBarArea, mainToolBar);
+        statusBar = new QStatusBar(MainWindow);
+        statusBar->setObjectName(QString::fromUtf8("statusBar"));
+        MainWindow->setStatusBar(statusBar);
+        dockWidget = new QDockWidget(MainWindow);
+        dockWidget->setObjectName(QString::fromUtf8("dockWidget"));
+        dockWidgetContents = new QWidget();
+        dockWidgetContents->setObjectName(QString::fromUtf8("dockWidgetContents"));
+        //dockWidget->setWidget(dockWidgetContents);
+        dockWidget->setWidget(centralwidget);
+        MainWindow->addDockWidget(static_cast<Qt::DockWidgetArea>(4), dockWidget);
+
+        retranslateUi(MainWindow);
+
+        QMetaObject::connectSlotsByName(MainWindow);
+    } // setupUi
+
+    void retranslateUi(QMainWindow *MainWindow)
+    {
+        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0, QApplication::UnicodeUTF8));
+        label->setText(QApplication::translate("MainWindow", "Opacity", 0, QApplication::UnicodeUTF8));
+        label_2->setText(QApplication::translate("MainWindow", "Opacity", 0, QApplication::UnicodeUTF8));
+    } // retranslateUi
+
+};
+
+namespace Ui {
+    class MainWindow: public Ui_MainWindow {};
+} // namespace Ui
+
+QT_END_NAMESPACE
+
+#endif // UI_MAINWINDOW_H

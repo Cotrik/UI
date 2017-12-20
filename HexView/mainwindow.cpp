@@ -31,6 +31,7 @@
 #include <vtkColorTransferFunction.h>
 
 #include <unordered_set>
+#include <set>
 
 enum SheetCellDataField{
     COMPONENT_COLOR = 0,
@@ -315,12 +316,21 @@ void MainWindow::createToolBars()
     QObject::connect(openFolderAction, SIGNAL(triggered()), this, SLOT(on_openFolder_clicked()));
     toolBar->addAction(openFolderAction);
 
-    ui->componentDockWidget->loadingBar = new QProgressBar;
-    ui->componentDockWidget->loadingBar->setOrientation(Qt::Horizontal);
-    ui->componentDockWidget->loadingBar->setRange(0, 100);
-    ui->componentDockWidget->loadingBar->setValue(0);
-    ui->componentDockWidget->loadingBar->setGeometry(0, 0, 200, 27);
-    toolBar->addWidget(ui->componentDockWidget->loadingBar);
+    if (ui->componentDockWidget != NULL) {
+        sheetsSetAction = new QAction(tr("&SheetsSet"), this);
+        sheetsSetAction->setIcon(QIcon("../icon/check.png"));
+        sheetsSetAction->setStatusTip(tr("Extract Minimal Sheets Set"));
+        QObject::connect(sheetsSetAction, SIGNAL(triggered()), this, SLOT(on_sheetsSet_clicked()));
+        toolBar->addAction(sheetsSetAction);
+    }
+    if (ui->componentDockWidget != NULL) {
+        ui->componentDockWidget->loadingBar = new QProgressBar;
+        ui->componentDockWidget->loadingBar->setOrientation(Qt::Horizontal);
+        ui->componentDockWidget->loadingBar->setRange(0, 100);
+        ui->componentDockWidget->loadingBar->setValue(0);
+        ui->componentDockWidget->loadingBar->setGeometry(0, 0, 200, 27);
+        toolBar->addWidget(ui->componentDockWidget->loadingBar);
+    }
 }
 
 void MainWindow::createStatusBar()
@@ -340,6 +350,67 @@ void MainWindow::on_openFolder_clicked()
     strFolderPath = filename.toStdString();
     ui->modelBrowser->loadModels(strFolderPath.c_str());
 }
+
+void FindSetCombination(std::vector<std::set<size_t>>& input, std::set<size_t>& target, std::vector<std::set<size_t>>& output) {
+    std::set<int> full;
+    for (auto it : input)
+        full.insert(it.begin(), it.end());
+
+    if (!includes(full.begin(), full.end(), target.begin(), target.end())) return;
+
+    for (size_t i = input.size() - 1; i > 0; --i) {
+        std::vector<bool> vec(input.size(), false);
+        std::fill(vec.begin() + i, vec.end(), true);
+        std::set<int> comb;
+
+        do {
+            for (size_t j = 0; j < vec.size(); ++j)
+                if (vec[j]) comb.insert(input[j].begin(), input[j].end());
+            if (includes(comb.begin(), comb.end(), target.begin(), target.end())) {
+                for (size_t j = 0; j < vec.size(); ++j)
+                    if (vec[j]) output.push_back(input[j]);
+                return;
+            }
+            comb.clear();
+
+        } while (next_permutation(vec.begin(), vec.end()));
+    }
+}
+
+void MainWindow::on_sheetsSet_clicked()
+{
+    if (ui->componentDockWidget == NULL) return;
+    if (strFilename.isEmpty()) return;
+    std::vector<std::set<size_t>> input;
+    std::set<size_t> target;
+    std::vector<std::set<size_t>> output;
+    for (auto& i : ui->sheetDockWidget->cellDataFields)
+        input.push_back(std::set<size_t>(i[1].begin(), i[1].end()));
+    for (auto i = 0; i < ui->componentDockWidget->numOfListItems; target.insert(i++));
+    FindSetCombination(input, target, output);
+    std::cout << "*** sheets set size " << output.size() << " ***" << std::endl;
+    std::set<size_t> ids;
+    for (auto i : output)
+        for (auto j = 0; j < input.size(); ++j)
+            if (i == input[j]) {
+                ids.insert(j);
+                break;
+            }
+    std::cout << "***************************" << std::endl;
+    for (auto i : ids)
+        std::cout << i << " ";
+    std::cout << std::endl;
+    std::cout << "***************************" << std::endl;
+
+    for (int i = 0; i < ui->sheetDockWidget->numOfListItems; ++i)
+        ui->sheetDockWidget->listWidget->item(i)->setCheckState(Qt::Unchecked);
+    for (auto id : ids) {
+        ui->sheetDockWidget->listWidget->item(id + 1)->setCheckState(Qt::Checked);
+        ui->sheetDockWidget->m_renderer->AddActor(ui->sheetDockWidget->m_vtkActors.at(ui->sheetDockWidget->listid_id[id]));
+    }
+    ui->qvtkWidget->update();
+}
+
 void MainWindow::on_fileOpen_clicked()
 {
     QString filename = QFileDialog::getOpenFileName(this,  tr("Open File"), strFolderPath.c_str(),
@@ -695,34 +766,58 @@ void MainWindow::on_sheetListAction_clicked()
 //    loadingThread = new LoadingThread(ui->sheetFaceAndEdgeDockWidget, strFolderPath, "SheetFacesAndEdges", QString("../icon/sheet.png"));
 //    runThread(thread, loadingThread);
 
-    componentThread = new QThread;
-    componentLoadingThread = new LoadingThread(ui->componentDockWidget, strFolderPath, "ComponentCells", QString("../icon/volume.png"));
-    runThread(componentThread, componentLoadingThread);
-
-    chordThread = new QThread;
-    chordLoadingThread = new LoadingThread(ui->chordDockWidget, strFolderPath, "ChordCells", QString("../icon/chord.png"));
-    runThread(chordThread, chordLoadingThread);
-
-    sheetThread = new QThread;
-    sheetLoadingThread = new LoadingThread(ui->sheetDockWidget, strFolderPath, "SheetCells", QString("../icon/sheets.png"));
-    runThread(sheetThread, sheetLoadingThread);
-
-    chordFaceAndEdgeThread = new QThread;
-    chordFaceAndEdgeLoadingThread = new LoadingThread(ui->chordFaceAndEdgeDockWidget, strFolderPath, "ChordFacesAndEdges", QString("../icon/chord1.png"));
-    runThread(chordFaceAndEdgeThread, chordFaceAndEdgeLoadingThread);
-
-    chordCurveThread = new QThread;
-    chordCurveLoadingThread = new LoadingThread(ui->chordCurveDockWidget, strFolderPath, "ChordCurves", QString("../icon/curve.png"));
-    runThread(chordCurveThread, chordCurveLoadingThread);
-
-    sheetFaceAndEdgeThread = new QThread;
-    sheetFaceAndEdgeLoadingThread = new LoadingThread(ui->sheetFaceAndEdgeDockWidget, strFolderPath, "SheetFacesAndEdges", QString("../icon/sheet.png"));
-    runThread(sheetFaceAndEdgeThread, sheetFaceAndEdgeLoadingThread);
-
-    sheetDualThread = new QThread;
-    sheetDualLoadingThread = new LoadingThread(ui->sheetDualDockWidget, strFolderPath, "SheetDual", QString("../icon/dual.png"));
-    runThread(sheetDualThread, sheetDualLoadingThread);
-
+    if (ui->componentDockWidget != NULL) {
+        componentThread = new QThread;
+        componentLoadingThread = new LoadingThread(ui->componentDockWidget, strFolderPath, "ComponentCells", QString("../icon/volume.png"));
+        runThread(componentThread, componentLoadingThread);
+    }
+    if (ui->chordDockWidget != NULL) {
+        chordThread = new QThread;
+        chordLoadingThread = new LoadingThread(ui->chordDockWidget, strFolderPath, "ChordCells", QString("../icon/chord.png"));
+        runThread(chordThread, chordLoadingThread);
+    }
+    if (ui->sheetDockWidget != NULL) {
+        sheetThread = new QThread;
+        sheetLoadingThread = new LoadingThread(ui->sheetDockWidget, strFolderPath, "SheetCells", QString("../icon/sheets.png"));
+        runThread(sheetThread, sheetLoadingThread);
+        if (ui->sheetDecompositionsDockWidget != NULL)
+            ui->sheetDecompositionsDockWidget->loadTreeWidgetItems(strFilename, "Decomposition", QString("../icon/dec.png"));
+    }
+    if (ui->chordFaceAndEdgeDockWidget != NULL) {
+        chordFaceAndEdgeThread = new QThread;
+        chordFaceAndEdgeLoadingThread = new LoadingThread(ui->chordFaceAndEdgeDockWidget, strFolderPath, "ChordFacesAndEdges", QString("../icon/chord1.png"));
+        runThread(chordFaceAndEdgeThread, chordFaceAndEdgeLoadingThread);
+    }
+    if (ui->chordCurveDockWidget != NULL) {
+        chordCurveThread = new QThread;
+        chordCurveLoadingThread = new LoadingThread(ui->chordCurveDockWidget, strFolderPath, "ChordCurves", QString("../icon/curve.png"));
+        runThread(chordCurveThread, chordCurveLoadingThread);
+    }
+    if (ui->sheetFaceAndEdgeDockWidget != NULL) {
+        sheetFaceAndEdgeThread = new QThread;
+        sheetFaceAndEdgeLoadingThread = new LoadingThread(ui->sheetFaceAndEdgeDockWidget, strFolderPath, "SheetFacesAndEdges", QString("../icon/sheet.png"));
+        runThread(sheetFaceAndEdgeThread, sheetFaceAndEdgeLoadingThread);
+    }
+    if (ui->sheetDualDockWidget != NULL) {
+        sheetDualThread = new QThread;
+        sheetDualLoadingThread = new LoadingThread(ui->sheetDualDockWidget, strFolderPath, "SheetDual", QString("../icon/dual.png"));
+        runThread(sheetDualThread, sheetDualLoadingThread);
+    }
+    if (ui->faceSegmentDockWidget != NULL) {
+        faceSegmentThread = new QThread;
+        faceSegmentLoadingThread = new LoadingThread(ui->faceSegmentDockWidget, strFolderPath, "FacePatches", QString("../icon/face_patch.png"));
+        runThread(faceSegmentThread, faceSegmentLoadingThread);
+    }
+    if (ui->singularFacesDockWidget != NULL) {
+        singularFacesThread = new QThread;
+        singularFacesLoadingThread = new LoadingThread(ui->singularFacesDockWidget, strFolderPath, "SingularFaces", QString("../icon/sf.png"));
+        runThread(singularFacesThread, singularFacesLoadingThread);
+    }
+    if (ui->sliceDockWidget != NULL) {
+        sliceThread = new QThread;
+        sliceLoadingThread = new LoadingThread(ui->sliceDockWidget, strFolderPath, "Slice", QString("../icon/slice.png"));
+        runThread(sliceThread, sliceLoadingThread);
+    }
 //    ui->componentDockWidget->loadListWidgetItems(strFolderPath, "ComponentCells", QString("../icon/volume.png"));
 //    ui->chordDockWidget->loadListWidgetItems(strFolderPath, "ChordCells", QString("../icon/chord.png"));
 //    ui->sheetDockWidget->loadListWidgetItems(strFolderPath, "SheetCells", QString("../icon/sheets.png"));
@@ -1004,27 +1099,34 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
 {
     vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
     if (index == COMPONENT_COLOR) {
+        if (ui->componentDockWidget != NULL) {
         ModifyColorMap(ui->componentDockWidget, colorLookupTable, 6, 1, "../icon/volume.png");
         for (int i = 0; i < ui->sheetDockWidget->numOfListItems; i++)
             ui->sheetDockWidget->listWidget->item(i+1)->setIcon(QIcon("../icon/sheets.png"));
+        }
     } else if (index == RAW_COMPONENT_ID) {
+        if (ui->componentDockWidget != NULL) {
         ModifyColorMap(ui->componentDockWidget, colorLookupTable, ui->componentDockWidget->numOfListItems, INT_MAX, "../icon/volume.png");
         for (int i = 0; i < ui->sheetDockWidget->numOfListItems; i++)
             ui->sheetDockWidget->listWidget->item(i+1)->setIcon(QIcon("../icon/sheets.png"));
+        }
     } else if (index == COMPONENT_ID) {
         ;
     } else if (index == CHORD_ID) {
+        if (ui->chordDockWidget != NULL)
         ModifyColorMap(ui->chordDockWidget, colorLookupTable, ui->chordDockWidget->numOfListItems, INT_MAX, "../icon/chord.png");
+        if (ui->chordFaceAndEdgeDockWidget != NULL)
         ModifyColorMap(ui->chordFaceAndEdgeDockWidget, colorLookupTable, ui->chordFaceAndEdgeDockWidget->numOfListItems, INT_MAX, "../icon/chord1.png");
     } else if (index == SHEET_ID) {
         ModifyColorMap(ui->sheetDockWidget, colorLookupTable, ui->sheetDockWidget->numOfListItems, INT_MAX, "../icon/sheets.png");
+        if (ui->sheetFaceAndEdgeDockWidget != NULL)
         ModifyColorMap(ui->sheetFaceAndEdgeDockWidget, colorLookupTable, ui->sheetFaceAndEdgeDockWidget->numOfListItems, INT_MAX, "../icon/sheet.png");
     }
     if (index != CHORD_LINK)
     for (int id = 0; id < ui->sheetDockWidget->numOfListItems; id++) {
         vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
         if (index == COMPONENT_COLOR) colorLookupTable->SetTableRange(0, 6);
-        else if (index == RAW_COMPONENT_ID) colorLookupTable->SetTableRange(0, ui->componentDockWidget->numOfListItems);
+        else if (index == RAW_COMPONENT_ID) if (ui->componentDockWidget != NULL) colorLookupTable->SetTableRange(0, ui->componentDockWidget->numOfListItems);
         else if (index == COMPONENT_ID) {
             std::vector<int> fields = ui->sheetDockWidget->cellDataFields[id][index];
             std::unordered_set<int> s(fields.begin(), fields.end());
@@ -1049,6 +1151,7 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
     }
 
     if (index != CHORD_LINK)
+        if (ui->chordDockWidget != NULL)
     for (int id = 0; id < ui->chordDockWidget->numOfListItems; id++) {
         vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
         if (index == COMPONENT_COLOR) colorLookupTable->SetTableRange(0, 6);

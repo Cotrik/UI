@@ -19,7 +19,8 @@ SOURCES +=\
     mainwindow.cpp \
     MouseInteractorStyle.cpp \
     HexDockWidget.cpp \
-    ModelBrowser.cpp
+    ModelBrowser.cpp \
+    SheetDecompositionsDockWidget.cpp
 
 HEADERS  += mainwindow.h \
     MouseInteractorStyle.h \
@@ -27,7 +28,8 @@ HEADERS  += mainwindow.h \
     ui_mainwindow.h \
     ui_mainwindow.h \
     HexDockWidget.h \
-    ModelBrowser.h
+    ModelBrowser.h \
+    SheetDecompositionsDockWidget.h
 
 FORMS    += \
     mainwindow.ui

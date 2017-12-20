@@ -8,7 +8,6 @@
 #include <QDoubleSpinBox>
 #include <QTreeWidget>
 #include <QBrush>
-#include <QtGui/QComboBox>
 
 #include <vtkNew.h>
 #include <vtkRenderWindow.h>
@@ -18,7 +17,6 @@
 #include <vtkDataSetMapper.h>
 #include <vtkActor.h>
 
-#include "HexDockWidget.h"
 #include "MouseInteractorStyle.h"
 
 struct RepresentationProperty
@@ -35,23 +33,6 @@ enum Representation
     SurfaceWithEdge,
     Singularity,
     WireFrame
-};
-
-class LoadingThread : public QObject
-{
-    Q_OBJECT
-public:
-    LoadingThread(HexDockWidget* hexDockWidget, const std::string path, const std::string prefix, QString iconFilename);
-    ~LoadingThread();
-public slots:
-    void process();
-private:
-    HexDockWidget* hexDockWidget;
-    std::string strFolderPath;
-    std::string prefix;
-    QString iconFilename;
-signals:
-    void finished();
 };
 
 namespace Ui {
@@ -87,10 +68,6 @@ private:
     QAction* baseComplexAction;
     QAction* singularityAction;
 
-    QAction* stopLoadingAction;
-    QAction* openFolderAction;
-    QAction* sheetsSetAction;
-
     QToolBar* toolBar;
     QSlider* opacitySlider;
     QDoubleSpinBox* opacitySpinBox;
@@ -100,7 +77,6 @@ private:
 
     QSlider* opacitySingularitySlider;
     QDoubleSpinBox* opacitySingularitySpinBox;
-    QComboBox* sheetCellDataFieldComboBox;
     ///////////////////////////////////
     // vtk member variables
     vtkNew<vtkPolyDataReader> m_vtkBaseComplexReader;
@@ -111,30 +87,12 @@ private:
     vtkNew<vtkActor> m_vtkActor;
     vtkNew<vtkActor> m_vtkBaseComplexActor;
     vtkNew<vtkActor> m_vtkSingularityActor;
-    vtkRenderer* m_renderer;
+    std::vector<vtkSmartPointer<vtkActor> > m_vtkComponentActors;
+    std::vector<vtkSmartPointer<vtkActor> > m_vtkChordActors;
+
+    std::vector<vtkSmartPointer<vtkActor> > m_vtkSheetActors;
+    vtkNew<vtkRenderer> m_renderer;
     vtkNew<InteractorStyleTrackballCamera> m_mouseInteractorStyle;
-
-    LoadingThread * componentLoadingThread;
-    LoadingThread * chordLoadingThread;
-    LoadingThread * sheetLoadingThread;
-    LoadingThread * chordFaceAndEdgeLoadingThread;
-    LoadingThread * chordCurveLoadingThread;
-    LoadingThread * sheetFaceAndEdgeLoadingThread;
-    LoadingThread * sheetDualLoadingThread;
-    LoadingThread * faceSegmentLoadingThread;
-    LoadingThread * singularFacesLoadingThread;
-    LoadingThread * sliceLoadingThread;
-
-    QThread * componentThread;
-    QThread * chordThread;
-    QThread * sheetThread;
-    QThread * chordFaceAndEdgeThread;
-    QThread * chordCurveThread;
-    QThread * sheetFaceAndEdgeThread;
-    QThread * sheetDualThread;
-    QThread * faceSegmentThread;
-    QThread * singularFacesThread;
-    QThread * sliceThread;
 
 private:
     void createActions();
@@ -150,24 +108,30 @@ private:
 public:
     virtual void Update();
     virtual std::vector<std::vector<int> > GetScalarFields(vtkSmartPointer<vtkUnstructuredGridReader> pReader, int numOfFields = 4);
-    virtual std::vector<std::vector<int> > GetScalarFields(vtkSmartPointer<vtkPolyDataReader> pReader, int numOfFields = 1);
+    virtual void AddActor(const char* filename, const int id, std::vector<vtkSmartPointer<vtkActor> > &actors);
     virtual void AddBaseComplexActor(const char* filename);
     virtual void AddSingularityActor(const char* filename);
-    //virtual void DisplaySheets(const std::vector<int>& sheetIndices);
+    virtual void DisplaySheets(const std::vector<int>& sheetIndices);
     virtual void DeactivateAllSheets();
     virtual bool IsSheetsEmpty() const;
-    void ModifyColorMap(HexDockWidget* dockWidget, vtkSmartPointer<vtkLookupTable> colorLookupTable, double tableMaxRange, int fieldId, const char* iconFilename);
-    void runThread(QThread* thread, LoadingThread* loadingThread);
+
 private:
     QString strFilename;
     std::string strFolderPath;
+    bool isNewFile;
+    int componentsNum;
+    int chordsNum;
+    int sheetsNum;
+    std::vector<std::vector<std::vector<int > > > sheetCellDataFields; // sheetCellDataFields[i][j][k], i is sheetnumber, j is num of fields in sheets, k is the scalar
+    RepresentationProperty representationProperty;
+    std::vector<std::vector<std::vector<int > > > chordCellDataFields; // sheetCellDataFields[i][j][k], i is chordnumber, j is num of fields in sheets, k is the scalar
+    std::vector<std::vector<std::vector<int > > > componentCellDataFields; // componentCellDataFields[i][j][k],  i is componentnumber, j is num of fields in sheets, k is the scalar
 
 private slots:
     virtual void resizeEvent(QResizeEvent *event);  // 改变大小
 
     virtual void slotExit();
     // File Menu
-    virtual void on_home_clicked();
     virtual void on_fileOpen_clicked();
     virtual bool on_fileSave_clicked();
     virtual bool on_fileSaveAs_clicked();
@@ -182,9 +146,9 @@ private slots:
     virtual void on_baseComplexAction_clicked();
     virtual void on_singularityAction_clicked();
 
-    virtual void on_stopLoading_clicked();
-    virtual void on_openFolder_clicked();
-    virtual void on_sheetsSet_clicked();
+    virtual void on_componentClicked(QListWidgetItem* item);
+    virtual void on_chordClicked(QListWidgetItem* item);
+    virtual void on_sheetClicked(QListWidgetItem* item);
 
     virtual void on_opacityChanged(int val);
     virtual void on_opacityChanged(double val);
@@ -193,9 +157,22 @@ private slots:
     virtual void on_opacitySingularityChanged(int val);
     virtual void on_opacitySingularityChanged(double val);
 
-    void on_sheetCellDataFieldCurrentIndexChanged(int index);
-    virtual void on_ModelClicked(QListWidgetItem* item);
+    virtual void on_componentOpacityChanged(int val);
+    virtual void on_componentOpacityChanged(double val);
+
+    virtual void on_chordOpacityChanged(int val);
+    virtual void on_chordOpacityChanged(double val);
+
+    virtual void on_sheetOpacityChanged(int val);
+    virtual void on_sheetOpacityChanged(double val);
+
+    virtual void on_componentDisplayCurrentIndexChanged(int index);
+    virtual void on_chordDisplayCurrentIndexChanged(int index);
+    virtual void on_sheetDisplayCurrentIndexChanged(int index);
+
+    virtual void on_sheetCellDataFieldCurrentIndexChanged(int index);
+    virtual void on_treeSheetItemClicked(QTreeWidgetItem * item, int column);
 };
+
 extern MainWindow* g_mainWindow;
-extern Ui::MainWindow* g_ui;
 #endif // MAINWINDOW_H

@@ -1,0 +1,85 @@
+<!-- <?xml version="1.0" encoding="UTF-8"?> -->
+<HexDockWidgets>
+<!-- Left -->
+<HexDockWidget>
+    <Name>Component</Name>
+    <DockWidgetArea>left</DockWidgetArea>
+    <IsPolyData>false</IsPolyData>
+    <Prefix>ComponentCells</Prefix>
+    <Icon>volume.png</Icon>
+    <Description>Component DockWidget</Description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>Chord</Name>
+    <DockWidgetArea>left</DockWidgetArea>
+    <IsPolyData>false</IsPolyData>
+    <Prefix>ChordCells</Prefix>
+    <Icon>chord.png</Icon>
+    <description>Chord DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>Sheet</Name>
+    <DockWidgetArea>left</DockWidgetArea>
+    <IsPolyData>false</IsPolyData>
+    <Prefix>SheetCells</Prefix>
+    <Icon>sheets.png</Icon>
+    <description>Sheet DockWidget</description>
+</HexDockWidget>
+<!-- Right -->
+<HexDockWidget>
+    <Name>ChordFaceAndEdge</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>ChordFacesAndEdges</Prefix>
+    <Icon>chord1.png</Icon>
+    <description>ChordFaceAndEdge DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>ChordCurve</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>ChordCurves</Prefix>
+    <Icon>curve.png</Icon>
+    <description>ChordCurve DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>sheetFaceAndEdge</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>SheetFacesAndEdges</Prefix>
+    <Icon>sheet.png</Icon>
+    <description>sheetFaceAndEdge DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>SheetDual</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>SheetDual</Prefix>
+    <Icon>dual.png</Icon>
+    <description>SheetDual DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>FaceSegment</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>FacePatches</Prefix>
+    <Icon>face_patch.png</Icon>
+    <description>FaceSegment DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>SingularFaces</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>SingularFaces</Prefix>
+    <Icon>sf.png</Icon>
+    <description>SingularFaces DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>Slice</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>Slice</Prefix>
+    <Icon>slice.png</Icon>
+    <description>Slice DockWidget</description>
+</HexDockWidget>
+</MainWindow>
