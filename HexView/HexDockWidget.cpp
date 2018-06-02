@@ -1,4 +1,5 @@
 #include "HexDockWidget.h"
+//#include "mainwindow.h"
 #include <QDir>
 
 #include <vtkVersion.h>
@@ -120,7 +121,7 @@ void HexDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
     Label = new QLabel(Widget);
     Label->setObjectName(QString::fromUtf8("Opacity"));
     Label->setGeometry(QRect(5, 32, 67, 17));
-    Label->setText(QApplication::translate("MainWindow", "Opacity", 0, QApplication::UnicodeUTF8));
+    Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
     OpacitySpinBox = new QDoubleSpinBox(Widget);
     OpacitySpinBox->setObjectName(name + QString::fromUtf8("OpacitySpinBox"));
     OpacitySpinBox->setGeometry(QRect(130, 32, 71, 27));
@@ -173,18 +174,23 @@ void HexDockWidget::resizeEvent(QResizeEvent *event)
 }
 
 void HexDockWidget::on_DisplayCurrentIndexChanged(int index) {
+    displayCurrentIndex = index;
     if (index == Surface)
         for (int id = 0; id < numOfListItems; id++) {
             m_vtkActors.at(id)->GetProperty()->EdgeVisibilityOff();
-            m_vtkActors.at(id)->GetProperty()->SetLineWidth(1);
+            m_vtkActors.at(id)->GetProperty()->SetLineWidth(6);
             m_vtkActors.at(id)->GetProperty()->SetRepresentationToSurface();
         }
     else if (index == SurfaceWithEdge)
         for (int id = 0; id < numOfListItems; id++) {
             m_vtkActors.at(id)->GetProperty()->EdgeVisibilityOn();
             m_vtkActors.at(id)->GetProperty()->SetEdgeColor(0, 0, 0);
-            m_vtkActors.at(id)->GetProperty()->SetLineWidth(2);
+            if (isQuadDual)
+                m_vtkActors.at(id)->GetProperty()->SetLineWidth(8);
+            else
+                m_vtkActors.at(id)->GetProperty()->SetLineWidth(2);
             m_vtkActors.at(id)->GetProperty()->SetRepresentationToSurface();
+            m_vtkActors.at(id)->GetProperty()->SetRenderLinesAsTubes(1);
         }
     else if (index == WireFrame)
         for (int id = 0; id < numOfListItems; id++) {
@@ -273,6 +279,7 @@ void HexDockWidget::on_CurrentItemChanged(QListWidgetItem *current, QListWidgetI
 }
 void HexDockWidget::loadListWidgetItems(const std::string path, const std::string prefix, QString iconFilename)
 {
+    isLoadingFinished = false;
     setFolderPath(path);
     setListItemFileNamePrefix(prefix);
     setIconFilename(iconFilename);
@@ -306,16 +313,16 @@ void HexDockWidget::loadListWidgetItems(const std::string path, const std::strin
         listid_id[listid[i]] = i;
 
 
-    opacitySpinBox->setEnabled(true);
-    opacitySlider->setEnabled(true);
-    displayComboBox->setEnabled(true);
+    opacitySpinBox->setEnabled(false);
+    opacitySlider->setEnabled(false);
+    displayComboBox->setEnabled(false);
 
     cellDataFields.clear();
-    QListWidgetItem* item;
     for (int i = 0; i < numOfListItems; i++) {
         QListWidgetItem* item = new QListWidgetItem(QIcon(iconFilename), QString(QString::fromStdString(prefix) + "_%1").arg(listid[i]));
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
         item->setCheckState(Qt::Unchecked); // AND initialize check state
+        item->setFlags(item->flags() & (~Qt::ItemIsEnabled));
         listWidget->addItem(item);
 //        QString filename = QString::fromStdString(strFolderPath) + QString("/") + QString::fromStdString(prefix) + QString::number(i) + QString(".vtk");
 //        AddActor(filename.toStdString().c_str(), i, m_vtkActors, isPolyData);
@@ -323,11 +330,19 @@ void HexDockWidget::loadListWidgetItems(const std::string path, const std::strin
         AddActor(filename.toStdString().c_str(), listid[i], m_vtkActors, isPolyData);
         // if (loadingBar && numOfListItems != 0) loadingBar->setValue(i * 100 / numOfListItems);
     }
-    item = new QListWidgetItem(QIcon(iconFilename), QString("all"));
+    for (int i = 0; i < numOfListItems; i++)
+        listWidget->item(i)->setFlags(listWidget->item(i)->flags() | Qt::ItemIsEnabled);
+    QListWidgetItem* item = new QListWidgetItem(QIcon(iconFilename), QString("all"));
     item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
     item->setCheckState(Qt::Unchecked);
     //listWidget->addItem(item);
     listWidget->insertItem(0, item);
+    on_DisplayCurrentIndexChanged(displayCurrentIndex);
+
+    opacitySpinBox->setEnabled(true);
+    opacitySlider->setEnabled(true);
+    displayComboBox->setEnabled(true);
+    isLoadingFinished = true;
 }
 
 void HexDockWidget::AddActor(const char* filename, const int id, std::vector<vtkSmartPointer<vtkActor> >& actors, bool isPolyData) {
@@ -361,7 +376,8 @@ void HexDockWidget::AddUnstructedGridActor(const char* filename, const int id, s
         color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
 
     for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
-        colors->InsertNextTupleValue(color);
+        //colors->InsertNextTupleValue(color);
+        colors->InsertNextTypedTuple(color);
 
     reader->GetOutput()->GetCellData()->SetScalars(colors);
     //////////////////////////////////
@@ -396,7 +412,8 @@ void HexDockWidget::AddPolyDataActor(const char* filename, const int id, std::ve
         color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
 
     for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
-        colors->InsertNextTupleValue(color);
+        //colors->InsertNextTupleValue(color);
+        colors->InsertNextTypedTuple(color);
 
     reader->GetOutput()->GetCellData()->SetScalars(colors);
     //////////////////////////////////
@@ -407,6 +424,7 @@ void HexDockWidget::AddPolyDataActor(const char* filename, const int id, std::ve
     vtkSmartPointer < vtkActor > actor = vtkSmartPointer < vtkActor >::New();
     actor->SetMapper(mapper);
     actor->GetProperty()->SetLineWidth(1);
+    actor->GetProperty()->SetAmbient(0.1);
     actors.push_back(actor);
 }
 

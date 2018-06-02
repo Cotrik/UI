@@ -1,7 +1,7 @@
 #include "SheetDecompositionsDockWidget.h"
 #include <QDir>
 #include <QProcess>
-#include <QtGui/QTreeWidget>
+#include <QTreeWidget>
 
 #include <vtkVersion.h>
 #include <vtkSmartPointer.h>
@@ -133,7 +133,7 @@ void SheetDecompositionsDockWidget::setupDockWidget(QMainWindow* &MainWindow, QS
 //    OpacitySpinBox->setValue(1);
     TreeWidget = new QTreeWidget(Widget);
     TreeWidget->setObjectName(name + QString::fromUtf8("TreeWidget"));
-    TreeWidget->setGeometry(QRect(5, /*70*/0, 220, 450));
+    TreeWidget->setGeometry(QRect(5, /*70*/5, 220, 450));
     //TreeWidget->setResizeMode(QListView::Adjust);
 //    DisplayComboBox = new QComboBox(Widget);
 //    DisplayComboBox->setObjectName(name + QString::fromUtf8("DisplayComboBox"));
@@ -145,6 +145,10 @@ void SheetDecompositionsDockWidget::setupDockWidget(QMainWindow* &MainWindow, QS
     DockWidgetContents->setObjectName(name + QString::fromUtf8("DockWidgetContents"));
     this->setWidget(Widget);
     MainWindow->addDockWidget(dockWidgetArea, this);
+}
+
+void SheetDecompositionsDockWidget::setActors(std::vector<vtkSmartPointer<vtkActor> >* _vtkActors) {
+    this->m_vtkActors = _vtkActors;
 }
 
 void SheetDecompositionsDockWidget::setIconFilename(QString filename) {
@@ -221,6 +225,7 @@ void SheetDecompositionsDockWidget::on_Clicked(QTreeWidgetItem * item, int colum
     std::string prefix = str.substr(0, pos);
 
     if (prefix != "sheet") {
+        currentDecompositionId = id;
         for (int i = 0; i < treeWidget->topLevelItemCount(); ++i) {
             for (int j = 0; j < treeWidget->topLevelItem(i)->childCount(); ++j)
                 treeWidget->topLevelItem(i)->child(j)->setCheckState(0, Qt::Unchecked);
@@ -232,8 +237,7 @@ void SheetDecompositionsDockWidget::on_Clicked(QTreeWidgetItem * item, int colum
         int j = 0;
         for (auto sheetid : sheets_coverSheetIds[id])
             treeWidget->topLevelItem(id)->child(j++)->setCheckState(0, Qt::Checked);
-    } else
-    {
+    } else {
         int id = QString(str.substr(pos + 1).c_str()).toInt();
         if (item->checkState(column) == Qt::Checked) m_renderer->AddActor(m_vtkActors->at(id));
         else if (item->checkState(column) == Qt::Unchecked) m_renderer->RemoveActor(m_vtkActors->at(id));
@@ -255,6 +259,7 @@ void SheetDecompositionsDockWidget::on_CurrentItemChanged(QTreeWidgetItem *curre
         std::string currentprefix = currentstr.substr(0, currentpos);
 
         if (currentprefix != "sheet") {
+            currentDecompositionItem = current;
             on_Clicked(current, 0);
             return;
         } else if (previous != NULL) {
@@ -300,6 +305,7 @@ void SheetDecompositionsDockWidget::on_CurrentItemChanged(QTreeWidgetItem *curre
 void SheetDecompositionsDockWidget::loadTreeWidgetItems(QString filename, const std::string prefix, QString iconFilename) {
 //    while (treeWidget->topLevelItemCount() > 0)
 //        delete treeWidget->takeTopLevelItem(0);
+    //widget->setEnabled(false);
     treeWidget->clear();
     sheets_coverSheetIds.clear();
     std::string str(filename.toStdString());

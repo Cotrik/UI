@@ -1,7 +1,7 @@
 <!-- <?xml version="1.0" encoding="UTF-8"?> -->
 <HexDockWidgets>
 <!-- Left -->
-<!-- 
+<!--
 <HexDockWidget>
     <Name>Component</Name>
     <DockWidgetArea>left</DockWidgetArea>
@@ -19,7 +19,7 @@
     <Icon>chord.png</Icon>
     <description>Chord DockWidget</description>
 </HexDockWidget>
- -->
+-->
 <HexDockWidget>
     <Name>Sheet</Name>
     <DockWidgetArea>left</DockWidgetArea>
@@ -61,6 +61,14 @@
     <Icon>dual.png</Icon>
     <description>SheetDual DockWidget</description>
 </HexDockWidget>
+<HexDockWidget>
+    <Name>QuadDual</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>true</IsPolyData>
+    <Prefix>QuadDual</Prefix>
+    <Icon>dual.png</Icon>
+    <description>QuadDual DockWidget</description>
+</HexDockWidget>
 <!--HexDockWidget>
     <Name>FaceSegment</Name>
     <DockWidgetArea>right</DockWidgetArea>
@@ -68,7 +76,7 @@
     <Prefix>FacePatches</Prefix>
     <Icon>face_patch.png</Icon>
     <description>FaceSegment DockWidget</description>
-</HexDockWidget-->
+</HexDockWidget>
 <HexDockWidget>
     <Name>SingularFaces</Name>
     <DockWidgetArea>right</DockWidgetArea>
@@ -76,7 +84,7 @@
     <Prefix>SingularFaces</Prefix>
     <Icon>sf.png</Icon>
     <description>SingularFaces DockWidget</description>
-</HexDockWidget>
+</HexDockWidget-->
 <!--HexDockWidget>
     <Name>Slice</Name>
     <DockWidgetArea>right</DockWidgetArea>

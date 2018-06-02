@@ -10,22 +10,38 @@
 #define UI_MAINWINDOW_H
 
 #include <QtCore/QVariant>
-#include <QtGui/QAction>
-#include <QtGui/QApplication>
-#include <QtGui/QButtonGroup>
-#include <QtGui/QComboBox>
-#include <QtGui/QDockWidget>
-#include <QtGui/QDoubleSpinBox>
-#include <QtGui/QHeaderView>
-#include <QtGui/QLabel>
-#include <QtGui/QListWidget>
-#include <QtGui/QMainWindow>
-#include <QtGui/QMenuBar>
-#include <QtGui/QSlider>
-#include <QtGui/QStatusBar>
-#include <QtGui/QToolBar>
-#include <QtGui/QTreeWidget>
-#include <QtGui/QWidget>
+//#include <QtGui/QAction>
+//#include <QtGui/QApplication>
+//#include <QtGui/QButtonGroup>
+//#include <QtGui/QComboBox>
+//#include <QtGui/QDockWidget>
+//#include <QtGui/QDoubleSpinBox>
+//#include <QtGui/QHeaderView>
+//#include <QtGui/QLabel>
+//#include <QtGui/QListWidget>
+//#include <QtGui/QMainWindow>
+//#include <QtGui/QMenuBar>
+//#include <QtGui/QSlider>
+//#include <QtGui/QStatusBar>
+//#include <QtGui/QToolBar>
+//#include <QtGui/QTreeWidget>
+//#include <QtGui/QWidget>
+#include <QAction>
+#include <QApplication>
+#include <QButtonGroup>
+#include <QComboBox>
+#include <QDockWidget>
+#include <QDoubleSpinBox>
+#include <QHeaderView>
+#include <QLabel>
+#include <QListWidget>
+#include <QMainWindow>
+#include <QMenuBar>
+#include <QSlider>
+#include <QStatusBar>
+#include <QToolBar>
+#include <QTreeWidget>
+#include <QWidget>
 #include <QXmlStreamReader>
 #include <QDebug>
 #include <QProgressBar>
@@ -33,6 +49,7 @@
 #include "HexDockWidget.h"
 #include "ModelBrowser.h"
 #include "SheetDecompositionsDockWidget.h"
+#include "MatrixDockWidget.h"
 
 QT_BEGIN_NAMESPACE
 struct HexDockWidgetInfo {
@@ -65,6 +82,8 @@ public:
     HexDockWidget* faceSegmentDockWidget = NULL;
     HexDockWidget* singularFacesDockWidget = NULL;
     HexDockWidget* sliceDockWidget = NULL;
+    HexDockWidget* quadDualDockWidget = NULL;
+    MatrixDockWidget* matrixDockWidget = NULL;
     //HexDockWidget* componentFaceAndEdgeDockWidget;
     std::vector<HexDockWidget*> docWidgets;
     std::vector<HexDockWidgetInfo> docWidgetInfo;
@@ -104,29 +123,34 @@ public:
         readConfigXml();
         for (auto& info : docWidgetInfo) {
             if (info.name == "Component")
-        componentDockWidget = new HexDockWidget(MainWindow, QString("Component"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer);
+                componentDockWidget = new HexDockWidget(MainWindow, QString("Component"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer);
             else if (info.name == "Chord")
-        chordDockWidget = new HexDockWidget(MainWindow, QString("Chord"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer);
+                chordDockWidget = new HexDockWidget(MainWindow, QString("Chord"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer);
             else if (info.name == "Sheet")
-        sheetDockWidget = new HexDockWidget(MainWindow, QString("Sheet"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer);
-        //componentFaceAndEdgeDockWidget = new HexDockWidget(MainWindow, QString("ComponentFaceAndEdge"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                sheetDockWidget = new HexDockWidget(MainWindow, QString("Sheet"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer);
+            //componentFaceAndEdgeDockWidget = new HexDockWidget(MainWindow, QString("ComponentFaceAndEdge"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "ChordFaceAndEdge")
-        chordFaceAndEdgeDockWidget = new HexDockWidget(MainWindow, QString("ChordFaceAndEdge"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                chordFaceAndEdgeDockWidget = new HexDockWidget(MainWindow, QString("ChordFaceAndEdge"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "ChordCurve")
-        chordCurveDockWidget = new HexDockWidget(MainWindow, QString("ChordCurve"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                chordCurveDockWidget = new HexDockWidget(MainWindow, QString("ChordCurve"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "SheetFaceAndEdge")
-        sheetFaceAndEdgeDockWidget = new HexDockWidget(MainWindow, QString("SheetFaceAndEdge"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                sheetFaceAndEdgeDockWidget = new HexDockWidget(MainWindow, QString("SheetFaceAndEdge"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "SheetDual")
-        sheetDualDockWidget = new HexDockWidget(MainWindow, QString("SheetDual"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                sheetDualDockWidget = new HexDockWidget(MainWindow, QString("SheetDual"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+            else if (info.name == "QuadDual") {
+                quadDualDockWidget = new HexDockWidget(MainWindow, QString("QuadDual"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                quadDualDockWidget->isQuadDual = true;
+            }
             else if (info.name == "FaceSegment")
-        faceSegmentDockWidget = new HexDockWidget(MainWindow, QString("FaceSegment"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                faceSegmentDockWidget = new HexDockWidget(MainWindow, QString("FaceSegment"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "SingularFaces")
-        singularFacesDockWidget = new HexDockWidget(MainWindow, QString("SingularFaces"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                singularFacesDockWidget = new HexDockWidget(MainWindow, QString("SingularFaces"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "Slice")
-        sliceDockWidget = new HexDockWidget(MainWindow, QString("Slice"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
+                sliceDockWidget = new HexDockWidget(MainWindow, QString("Slice"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
         }
+        matrixDockWidget = new MatrixDockWidget(MainWindow, QString("Matrix"), Qt::RightDockWidgetArea, true);
         sheetDecompositionsDockWidget = new SheetDecompositionsDockWidget(MainWindow, QString("Sheet Decompositions"), Qt::LeftDockWidgetArea, qvtkWidget, m_renderer,
-                                                                          false, &sheetDockWidget->m_vtkActors);
+                                                                          false, &sheetDualDockWidget->m_vtkActors);
 //        sheetCellDataFieldComboBox = new QComboBox(sheetWidget);
 //        sheetCellDataFieldComboBox->setObjectName(QString::fromUtf8("sheetCellDataFieldComboBox"));
 //        sheetCellDataFieldComboBox->setGeometry(QRect(0, 0, 200, 27));
@@ -144,7 +168,7 @@ public:
     } // setupUi
 
     void retranslateUi(QMainWindow *MainWindow) {
-        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0, QApplication::UnicodeUTF8));
+        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0, /*QApplication::UnicodeUTF8*/0));
     }
 
     void readConfigXml() {

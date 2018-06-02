@@ -39,7 +39,8 @@ enum SheetCellDataField{
     COMPONENT_ID,
     CHORD_ID,
     SHEET_ID,
-    CHORD_LINK
+    CHORD_LINK,
+    MAIN_SHEET
 };
 
 MainWindow* g_mainWindow = NULL;
@@ -62,11 +63,6 @@ static void GetColorPixmap(unsigned char color[3], QPixmap& pixmap)
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow),
-    componentThread(NULL),
-    chordThread(NULL),
-    sheetThread(NULL),
-    chordFaceAndEdgeThread(NULL),
-    sheetFaceAndEdgeThread(NULL),
     strFolderPath("/home/cotrik/svn/testcase/test_base_complex")
 {
     ui->setupUi(this);
@@ -191,6 +187,11 @@ void MainWindow::createActions()
 //    QObject::connect(ui->sheetTreeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(on_treeSheetItemClicked(QTreeWidgetItem *, int)));
 
     QObject::connect(ui->modelBrowser->listWidget, SIGNAL(itemClicked(QListWidgetItem *)), this, SLOT(on_ModelClicked(QListWidgetItem *)));
+    m_timer = new QTimer(this);
+    QObject::connect(m_timer, SIGNAL(timout()), this, SLOT(TimerHandlerFunction()));
+//    m_timer.setSingleShot(false); // if you only want it to fire once
+//    //m_timer.setInterval(1000);
+    m_timer->start(1000);
 }
 
 void MainWindow::createMenus()
@@ -305,6 +306,7 @@ void MainWindow::createToolBars()
     sheetCellDataFieldComboBox->addItem(QIcon("../icon/chord.png"), QString("Chord id"));
     sheetCellDataFieldComboBox->addItem(QIcon("../icon/sheet.png"), QString("Sheet id"));
     sheetCellDataFieldComboBox->addItem(QIcon("../icon/link.png"), QString("Chord link"));
+    sheetCellDataFieldComboBox->addItem(QIcon("../icon/sheet.png"), QString("Main sheet"));
     sheetCellDataFieldComboBox->setCurrentIndex(COMPONENT_COLOR);
     QObject::connect(sheetCellDataFieldComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(on_sheetCellDataFieldCurrentIndexChanged(int)));
     toolBar->addWidget(sheetCellDataFieldComboBox);
@@ -331,6 +333,16 @@ void MainWindow::createToolBars()
         ui->componentDockWidget->loadingBar->setGeometry(0, 0, 200, 27);
         toolBar->addWidget(ui->componentDockWidget->loadingBar);
     }
+
+    sheetDisplayTypeComboBox = new QComboBox;
+    sheetDisplayTypeComboBox->setObjectName(QString::fromUtf8("sheetCellDataFieldComboBox"));
+    sheetDisplayTypeComboBox->setGeometry(QRect(0, 0, 200, 27));
+    sheetDisplayTypeComboBox->addItem(QIcon("../icon/sheets.png"), QString("Hex"));
+    sheetDisplayTypeComboBox->addItem(QIcon("../icon/sheet.png"), QString("Quad"));
+    sheetDisplayTypeComboBox->addItem(QIcon("../icon/link.png"), QString("Chord"));
+    sheetDisplayTypeComboBox->setCurrentIndex(0);
+    QObject::connect(sheetDisplayTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(on_sheetDisplyTypeCurrentIndexChanged(int)));
+    toolBar->addWidget(sheetDisplayTypeComboBox);
 }
 
 void MainWindow::createStatusBar()
@@ -505,6 +517,8 @@ void MainWindow::Update()
     m_vtkDataSetMapper->SetInputConnection(m_vtkUnstructuredGridReader->GetOutputPort());
     //vtkSmartPointer < vtkActor > actor = vtkSmartPointer < vtkActor > ::New();
     m_vtkActor->SetMapper(m_vtkDataSetMapper.GetPointer());
+    m_vtkActor->GetProperty()->SetAmbient(0.1);
+    m_vtkActor->GetProperty()->SetSpecular(0.01);
 
     vtkSmartPointer<vtkLookupTable> lut = vtkSmartPointer<vtkLookupTable>::New();
     lut->SetNumberOfTableValues(1);
@@ -655,6 +669,27 @@ void MainWindow::AddBaseComplexActor(const char* filename)
     vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
     reader->SetFileName(filename);
     reader->Update();
+
+    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+    colorLookupTable->SetTableRange(0, 1);
+    colorLookupTable->Build();
+    // Generate the colors for each point based on the color map
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->SetName("Colors");
+
+    double dcolor[3] = {0.0, 0, 0.0};
+    //colorLookupTable->GetColor(0, dcolor);
+    unsigned char color[3];
+    for(unsigned int j = 0; j < 3; j++)
+        color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+
+    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+        //colors->InsertNextTupleValue(color);
+        colors->InsertNextTypedTuple(color);
+
+    reader->GetOutput()->GetCellData()->SetScalars(colors);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(reader->GetOutputPort());
     mapper->ImmediateModeRenderingOn();
@@ -667,21 +702,166 @@ void MainWindow::AddBaseComplexActor(const char* filename)
     m_vtkBaseComplexActor.GetPointer()->GetProperty()->SetRepresentationToSurface();
 }
 
+std::vector<std::vector<int> > GetScalarFields_(vtkSmartPointer<vtkPolyDataReader> pReader)
+{
+    std::vector<std::vector<int> > fields;
+    int numOfFields = pReader->GetOutput()->GetCellData()->GetNumberOfArrays();
+    for (int f = 0; f < numOfFields; f++) {
+        vtkCellData* cellData = pReader->GetOutput()->GetCellData();
+        pReader->SetScalarsName(pReader->GetScalarsNameInFile(f));
+        pReader->Update();
+        cellData->Update();
+        vtkDataSetAttributes* attribute = vtkDataSetAttributes::SafeDownCast(cellData);
+        vtkIntArray* scalarDataInt = vtkIntArray::SafeDownCast(attribute->GetScalars(pReader->GetScalarsNameInFile(f)));
+        if (scalarDataInt) {
+            int nc = scalarDataInt->GetNumberOfTuples();
+            std::vector<int> scalarField(nc);
+            for (int i = 0; i < nc; i++)
+                scalarField.at(i) = scalarDataInt->GetValue(i);
+            fields.push_back(scalarField);
+        }
+    }
+    return fields;
+}
+
 void MainWindow::AddSingularityActor(const char* filename)
 {
     vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
     reader->SetFileName(filename);
     reader->Update();
+    auto cellDatas = GetScalarFields(reader);
+    cout << "number of cellDatas = " << cellDatas.size() << endl;
+    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+    colorLookupTable->SetTableRange(0, 1);
+    colorLookupTable->Build();
+    // Generate the colors for each point based on the color map
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->SetName("Colors");
+
+    double dcolor[3] = {1.0, 0, 1.0};
+    //colorLookupTable->GetColor(0, dcolor);
+    unsigned char color[3];
+    for(unsigned int j = 0; j < 3; j++)
+        color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+
+    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+        //colors->InsertNextTupleValue(color);
+        colors->InsertNextTypedTuple(color);
+
+    reader->GetOutput()->GetCellData()->SetScalars(colors);
+
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     mapper->SetInputConnection(reader->GetOutputPort());
     mapper->ImmediateModeRenderingOn();
     m_vtkSingularityActor.GetPointer()->SetMapper(mapper);
     m_vtkSingularityActor.GetPointer()->GetProperty()->EdgeVisibilityOn();
-    m_vtkSingularityActor.GetPointer()->GetProperty()->SetEdgeColor(1, 0, 0);
-    m_vtkSingularityActor.GetPointer()->GetProperty()->SetLineWidth(4);
-    m_vtkSingularityActor.GetPointer()->GetProperty()->SetPointSize(6);
+    m_vtkSingularityActor.GetPointer()->GetProperty()->SetEdgeColor(1, 1, 0);
+    m_vtkSingularityActor.GetPointer()->GetProperty()->SetLineWidth(6);
+    m_vtkSingularityActor.GetPointer()->GetProperty()->SetPointSize(12);
     //m_vtkSingularityActor.GetPointer()->GetProperty()->SetColor(1, 0, 0);
     m_vtkSingularityActor.GetPointer()->GetProperty()->SetRepresentationToSurface();
+    m_vtkSingularityActor->GetProperty()->SetRenderLinesAsTubes(1);
+    m_vtkSingularityActor->GetProperty()->SetRenderPointsAsSpheres(1);
+    //m_vtkSingularityActor->GetProperty()->SetVertexVisibility(1);
+    m_vtkSingularityActor->GetProperty()->SetVertexColor(1, 0, 0);
+}
+
+void MainWindow::AddSingularityVActor(const char* filename)
+{
+    vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
+    reader->SetFileName(filename);
+    reader->Update();
+    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+    colorLookupTable->SetTableRange(0, 1);
+    colorLookupTable->Build();
+    // Generate the colors for each point based on the color map
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->SetName("Colors");
+
+    double dcolor[3] = {1.0, 0, 0.0};
+    //colorLookupTable->GetColor(0, dcolor);
+    unsigned char color[3];
+    for(unsigned int j = 0; j < 3; j++)
+        color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+
+    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+        //colors->InsertNextTupleValue(color);
+        colors->InsertNextTypedTuple(color);
+
+    reader->GetOutput()->GetCellData()->SetScalars(colors);
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(reader->GetOutputPort());
+    mapper->ImmediateModeRenderingOn();
+    m_vtkSingularityVActor.GetPointer()->SetMapper(mapper);
+    m_vtkSingularityVActor.GetPointer()->GetProperty()->EdgeVisibilityOn();
+    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetEdgeColor(1, 1, 0);
+    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetLineWidth(6);
+    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetPointSize(12);
+    //m_vtkSingularityActor.GetPointer()->GetProperty()->SetColor(1, 0, 0);
+    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetRepresentationToSurface();
+    m_vtkSingularityVActor->GetProperty()->SetRenderLinesAsTubes(1);
+    m_vtkSingularityVActor->GetProperty()->SetRenderPointsAsSpheres(1);
+    //m_vtkSingularityActor->GetProperty()->SetVertexVisibility(1);
+    m_vtkSingularityVActor->GetProperty()->SetVertexColor(1, 0, 0);
+}
+
+void MainWindow::AddSingularityEActor(const char* filename)
+{
+    vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
+    reader->SetFileName(filename);
+    reader->Update();
+    auto cellDatas = GetScalarFields(reader, 2);
+    cout << "number of cellDatas = " << cellDatas.size() << endl;
+    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+    colorLookupTable->SetTableRange(0, 5);
+    colorLookupTable->Build();
+    // Generate the colors for each point based on the color map
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+    colors->SetNumberOfComponents(3);
+    colors->SetName("Colors");
+
+    double dcolor_valence1[3] = {0, 0, 1.0};
+    double dcolor_valence3[3] = {0, 1.0, 0};
+    double dcolor_valence5[3] = {1.0, 1.0};
+
+    //colorLookupTable->GetColor(0, dcolor);
+    unsigned char color_valence1[3];
+    unsigned char color_valence3[3];
+    unsigned char color_valence5[3];
+    for(unsigned int j = 0; j < 3; j++) {
+        color_valence1[j] = static_cast<unsigned char>(255.0 * dcolor_valence1[j]);
+        color_valence3[j] = static_cast<unsigned char>(255.0 * dcolor_valence3[j]);
+        color_valence5[j] = static_cast<unsigned char>(255.0 * dcolor_valence5[j]);
+    }
+
+    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+        if (cellDatas[1][i] == 1)
+            colors->InsertNextTypedTuple(color_valence1);
+        else if (cellDatas[1][i] == 3)
+            colors->InsertNextTypedTuple(color_valence3);
+        else if (cellDatas[1][i] == 5)
+            colors->InsertNextTypedTuple(color_valence5);
+
+    reader->GetOutput()->GetCellData()->SetScalars(colors);
+
+    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputConnection(reader->GetOutputPort());
+    mapper->ImmediateModeRenderingOn();
+    m_vtkSingularityEActor.GetPointer()->SetMapper(mapper);
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->EdgeVisibilityOn();
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->SetEdgeColor(1, 1, 0);
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->SetLineWidth(6);
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->SetPointSize(12);
+    //m_vtkSingularityActor.GetPointer()->GetProperty()->SetColor(1, 0, 0);
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->SetRepresentationToSurface();
+    m_vtkSingularityEActor->GetProperty()->SetRenderLinesAsTubes(1);
+    m_vtkSingularityEActor->GetProperty()->SetRenderPointsAsSpheres(1);
+    //m_vtkSingularityActor->GetProperty()->SetVertexVisibility(1);
+    m_vtkSingularityEActor->GetProperty()->SetVertexColor(1, 0, 0);
+    m_vtkSingularityEActor->GetProperty()->SetAmbient(0.1);
 }
 
 //void MainWindow::DisplaySheets(const std::vector<int>& sheetIndices)
@@ -780,8 +960,6 @@ void MainWindow::on_sheetListAction_clicked()
         sheetThread = new QThread;
         sheetLoadingThread = new LoadingThread(ui->sheetDockWidget, strFolderPath, "SheetCells", QString("../icon/sheets.png"));
         runThread(sheetThread, sheetLoadingThread);
-        if (ui->sheetDecompositionsDockWidget != NULL)
-            ui->sheetDecompositionsDockWidget->loadTreeWidgetItems(strFilename, "Decomposition", QString("../icon/dec.png"));
     }
     if (ui->chordFaceAndEdgeDockWidget != NULL) {
         chordFaceAndEdgeThread = new QThread;
@@ -802,6 +980,13 @@ void MainWindow::on_sheetListAction_clicked()
         sheetDualThread = new QThread;
         sheetDualLoadingThread = new LoadingThread(ui->sheetDualDockWidget, strFolderPath, "SheetDual", QString("../icon/dual.png"));
         runThread(sheetDualThread, sheetDualLoadingThread);
+    }
+    if (ui->quadDualDockWidget != NULL) {
+        quadDualThread = new QThread;
+        quadDualLoadingThread = new LoadingThread(ui->quadDualDockWidget, strFolderPath, "QuadDual", QString("../icon/dual.png"));
+        runThread(quadDualThread, quadDualLoadingThread);
+        if (ui->sheetDecompositionsDockWidget != NULL)
+            ui->sheetDecompositionsDockWidget->loadTreeWidgetItems(strFilename, "Decomposition", QString("../icon/dec.png"));
     }
     if (ui->faceSegmentDockWidget != NULL) {
         faceSegmentThread = new QThread;
@@ -833,6 +1018,8 @@ void MainWindow::on_sheetListAction_clicked()
 
     AddBaseComplexActor((QString::fromStdString(strFolderPath) + QString("/BaseComplexEdges.vtk")).toStdString().c_str());
     AddSingularityActor((QString::fromStdString(strFolderPath) + QString("/singularities.vtk")).toStdString().c_str());
+    AddSingularityVActor((QString::fromStdString(strFolderPath) + QString("/singularV.vtk")).toStdString().c_str());
+    AddSingularityEActor((QString::fromStdString(strFolderPath) + QString("/singularE.vtk")).toStdString().c_str());
     sheetListAction->setDisabled(true);
     componentListAction->setDisabled(true);
     ui->qvtkWidget->update();
@@ -901,12 +1088,22 @@ void MainWindow::on_baseComplexAction_clicked()
 
 void MainWindow::on_singularityAction_clicked()
 {
+//    if (singularityAction->isChecked()) {
+//        m_renderer->AddActor(m_vtkSingularityActor.GetPointer());
+//        //m_mouseInteractorStyle->SetData(m_vtkSingularityReader.GetPointer()->GetOutput());
+//        m_mouseInteractorStyle->SetData(((vtkPolyDataMapper*) m_vtkSingularityActor.GetPointer()->GetMapper())->GetInput());
+//    } else {
+//        m_renderer->RemoveActor(m_vtkSingularityActor.GetPointer());
+//        m_mouseInteractorStyle->SetData(m_vtkUnstructuredGridReader->GetOutput());
+//    }
     if (singularityAction->isChecked()) {
-        m_renderer->AddActor(m_vtkSingularityActor.GetPointer());
+        m_renderer->AddActor(m_vtkSingularityVActor.GetPointer());
+        m_renderer->AddActor(m_vtkSingularityEActor.GetPointer());
         //m_mouseInteractorStyle->SetData(m_vtkSingularityReader.GetPointer()->GetOutput());
-        m_mouseInteractorStyle->SetData(((vtkPolyDataMapper*) m_vtkSingularityActor.GetPointer()->GetMapper())->GetInput());
+        m_mouseInteractorStyle->SetData(((vtkPolyDataMapper*) m_vtkSingularityEActor.GetPointer()->GetMapper())->GetInput());
     } else {
-        m_renderer->RemoveActor(m_vtkSingularityActor.GetPointer());
+        m_renderer->RemoveActor(m_vtkSingularityVActor.GetPointer());
+        m_renderer->RemoveActor(m_vtkSingularityEActor.GetPointer());
         m_mouseInteractorStyle->SetData(m_vtkUnstructuredGridReader->GetOutput());
     }
     m_renderer->SetBackground(1, 1, 1);
@@ -1089,7 +1286,8 @@ void MainWindow::ModifyColorMap(HexDockWidget* dockWidget, vtkSmartPointer<vtkLo
         QIcon icon = QIcon(pixmap);
         dockWidget->listWidget->item(i+1)->setIcon(icon);
         for(int k = 0; k < dockWidget->m_vtkActors.at(i)->GetMapper()->GetInput()->GetNumberOfCells(); k++)
-            colors->InsertNextTupleValue(ccolor);
+            // colors->InsertNextTupleValue(ccolor);
+            colors->InsertNextTypedTuple(ccolor);
         dockWidget->m_vtkActors.at(i)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
         /////////////////////////////////////
     }
@@ -1126,7 +1324,9 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
     for (int id = 0; id < ui->sheetDockWidget->numOfListItems; id++) {
         vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
         if (index == COMPONENT_COLOR) colorLookupTable->SetTableRange(0, 6);
-        else if (index == RAW_COMPONENT_ID) if (ui->componentDockWidget != NULL) colorLookupTable->SetTableRange(0, ui->componentDockWidget->numOfListItems);
+        else if (index == RAW_COMPONENT_ID) {
+            if (ui->componentDockWidget != NULL) colorLookupTable->SetTableRange(0, ui->componentDockWidget->numOfListItems);
+        }
         else if (index == COMPONENT_ID) {
             std::vector<int> fields = ui->sheetDockWidget->cellDataFields[id][index];
             std::unordered_set<int> s(fields.begin(), fields.end());
@@ -1145,7 +1345,8 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
             colorLookupTable->GetColor(ui->sheetDockWidget->cellDataFields[id][fieldid][i], dcolor);
             for(unsigned int j = 0; j < 3; j++)
                 color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
-            colors->InsertNextTupleValue(color);
+            //colors->InsertNextTupleValue(color);
+            colors->InsertNextTypedTuple(color);
         }
         ui->sheetDockWidget->m_vtkActors.at(id)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
     }
@@ -1174,7 +1375,8 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
             colorLookupTable->GetColor(ui->chordDockWidget->cellDataFields[id][fieldid][i], dcolor);
             for(unsigned int j = 0; j < 3; j++)
                 color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
-            colors->InsertNextTupleValue(color);
+            // colors->InsertNextTupleValue(color);
+            colors->InsertNextTypedTuple(color);
         }
         ui->chordDockWidget->m_vtkActors.at(id)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
     }
@@ -1201,6 +1403,33 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
 //        }
 //        ui->chordFaceAndEdgeDockWidget->m_vtkActors.at(id)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
 //    }
+
+    if (index == MAIN_SHEET && ui->sheetDecompositionsDockWidget != NULL && ui->sheetDecompositionsDockWidget->currentDecompositionItem != NULL) {
+        const auto& sheets_coverSheetIds = ui->sheetDecompositionsDockWidget->sheets_coverSheetIds[ui->sheetDecompositionsDockWidget->currentDecompositionId];
+        int colorid = 0;
+        for (auto sheetid : sheets_coverSheetIds) {
+            vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+            colorLookupTable->SetTableRange(0, sheets_coverSheetIds.size());
+            colorLookupTable->Build();
+            vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+            colors->SetNumberOfComponents(3);
+            colors->SetName("Colors-");
+            double dcolor[3];
+            unsigned char color[3];
+            int fieldid = index < 3 ? index : 3;
+            for (int i = 0; i < ui->sheetDecompositionsDockWidget->m_vtkActors->at(sheetid)->GetMapper()->GetInput()->GetNumberOfCells(); i++) {
+                colorLookupTable->GetColor(colorid, dcolor);
+                for(unsigned int j = 0; j < 3; j++)
+                    color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+                // colors->InsertNextTupleValue(color);
+                colors->InsertNextTypedTuple(color);
+            }
+            ui->sheetDecompositionsDockWidget->m_vtkActors->at(sheetid)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
+            ui->sheetDockWidget->m_vtkActors.at(sheetid)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
+            ui->quadDualDockWidget->m_vtkActors.at(sheetid)->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
+            colorid++;
+        }
+    }
 
     ui->qvtkWidget->update();
 }
@@ -1261,7 +1490,52 @@ void MainWindow::on_sheetCellDataFieldCurrentIndexChanged(int index)
 //    ui->qvtkWidget->update();
 //}
 
+void MainWindow::on_sheetDisplyTypeCurrentIndexChanged(int index) {
+//    if (ui->sheetDecompositionsDockWidget && ui->sheetDockWidget)
+//        for (int id = 0; id < ui->sheetDockWidget->numOfListItems; id++)
+//            ui->sheetDockWidget->m_renderer->RemoveActor(ui->sheetDockWidget->m_vtkActors.at(id));
+//    if (ui->sheetDecompositionsDockWidget && ui->sheetDualDockWidget)
+//        for (int id = 0; id < ui->sheetDualDockWidget->numOfListItems; id++)
+//            ui->sheetDualDockWidget->m_renderer->RemoveActor(ui->sheetDualDockWidget->m_vtkActors.at(id));
+//    if (ui->sheetDecompositionsDockWidget && ui->quadDualDockWidget)
+//        for (int id = 0; id < ui->quadDualDockWidget->numOfListItems; id++)
+//            ui->quadDualDockWidget->m_renderer->RemoveActor(ui->quadDualDockWidget->m_vtkActors.at(id));
+    if (index == 0) { // hex
+        if (ui->sheetDecompositionsDockWidget && ui->sheetDockWidget)
+            ui->sheetDecompositionsDockWidget->setActors(&ui->sheetDockWidget->m_vtkActors);
+    } else if (index == 1) { // quad
+        if (ui->sheetDecompositionsDockWidget && ui->sheetDualDockWidget)
+            ui->sheetDecompositionsDockWidget->setActors(&ui->sheetDualDockWidget->m_vtkActors);
+    } else if (index == 2) { // edge
+        if (ui->sheetDecompositionsDockWidget && ui->quadDualDockWidget)
+            ui->sheetDecompositionsDockWidget->setActors(&ui->quadDualDockWidget->m_vtkActors);
+    }
+}
+
 void MainWindow::on_ModelClicked(QListWidgetItem * item) {
+    if (ui->componentDockWidget != NULL && !ui->componentDockWidget->isLoadingFinished)  return; // componentThread->wait();
+    if (ui->chordDockWidget != NULL && !ui->chordDockWidget->isLoadingFinished) return; // chordThread->wait();
+    if (ui->sheetDockWidget != NULL && !ui->sheetDockWidget->isLoadingFinished) return; // sheetThread->wait();
+    if (ui->chordFaceAndEdgeDockWidget != NULL && !ui->chordFaceAndEdgeDockWidget->isLoadingFinished) return; // chordFaceAndEdgeThread->wait();
+    if (ui->chordCurveDockWidget != NULL && !ui->chordCurveDockWidget->isLoadingFinished) return; // chordCurveThread->wait();
+    if (ui->sheetFaceAndEdgeDockWidget != NULL && !ui->sheetFaceAndEdgeDockWidget->isLoadingFinished) return; // sheetFaceAndEdgeThread->wait();
+    if (ui->sheetDualDockWidget != NULL && !ui->sheetDualDockWidget->isLoadingFinished) return; // sheetDualThread->wait();
+    if (ui->quadDualDockWidget != NULL && !ui->quadDualDockWidget->isLoadingFinished) return; // quadDualThread->wait();
+    if (ui->faceSegmentDockWidget != NULL && !ui->faceSegmentDockWidget->isLoadingFinished) return; // faceSegmentThread->wait();
+    if (ui->singularFacesDockWidget != NULL && !ui->singularFacesDockWidget->isLoadingFinished) return; // singularFacesThread->wait();
+    if (ui->sliceDockWidget != NULL && !ui->sliceDockWidget->isLoadingFinished) return; // sliceThread->wait();
+//    if (ui->componentDockWidget != NULL && componentThread != NULL && componentThread->isRunning())  return; // componentThread->wait();
+//    if (ui->chordDockWidget != NULL && chordThread != NULL && chordThread->isRunning()) return; // chordThread->wait();
+//    if (ui->sheetDockWidget != NULL && sheetThread != NULL && sheetThread->isRunning()) return; // sheetThread->wait();
+//    if (ui->chordFaceAndEdgeDockWidget != NULL && chordFaceAndEdgeThread != NULL && chordFaceAndEdgeThread->isRunning()) return; // chordFaceAndEdgeThread->wait();
+//    if (ui->chordCurveDockWidget != NULL && chordCurveThread != NULL && chordCurveThread->isRunning()) return; // chordCurveThread->wait();
+//    if (ui->sheetFaceAndEdgeDockWidget != NULL && sheetFaceAndEdgeThread != NULL && sheetFaceAndEdgeThread->isRunning()) return; // sheetFaceAndEdgeThread->wait();
+//    if (ui->sheetDualDockWidget != NULL && sheetDualThread != NULL && sheetDualThread->isRunning()) return; // sheetDualThread->wait();
+//    if (ui->quadDualDockWidget != NULL && quadDualThread != NULL && quadDualThread->isRunning()) return; // quadDualThread->wait();
+//    if (ui->faceSegmentDockWidget != NULL && faceSegmentThread != NULL && faceSegmentThread->isRunning()) return; // faceSegmentThread->wait();
+//    if (ui->singularFacesDockWidget != NULL && singularFacesThread != NULL && singularFacesThread->isRunning()) return; // singularFacesThread->wait();
+//    if (ui->sliceDockWidget != NULL && sliceThread != NULL && sliceThread->isRunning()) return; // sliceThread->wait();
+
     QVariant variant = item->data(Qt::UserRole);
     std::string str = item->text().toStdString();
     for (int i = 0; i < ui->modelBrowser->filenames.size(); ++i) {
@@ -1297,4 +1571,10 @@ void MainWindow::on_ModelClicked(QListWidgetItem * item) {
 //    qDebug() << text;
 //    std::string str = item->text().toStdString();
 //    qDebug() << QString::fromStdString(str);
+}
+
+void MainWindow::TimerHandlerFunction()
+{
+     if (ui->sheetDecompositionsDockWidget && ui->quadDualDockWidget && ui->quadDualDockWidget->isLoadingFinished)
+         ui->sheetDecompositionsDockWidget->widget->setEnabled(true);
 }

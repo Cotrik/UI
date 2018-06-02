@@ -36,10 +36,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
     /usr/include/eigen3
-    /usr/local/include/)
+    /usr/local/include/
+	D:/Qt5/5.10.1/msvc2017_64/include)
 
 set(ALL_LIBS
-	gomp
+	#gomp
 )
 
 #file(GLOB UI_FILES *.ui)

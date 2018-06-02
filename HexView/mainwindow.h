@@ -8,7 +8,9 @@
 #include <QDoubleSpinBox>
 #include <QTreeWidget>
 #include <QBrush>
-#include <QtGui/QComboBox>
+#include <QComboBox>
+#include <QTimer>
+#include <QTime>
 
 #include <vtkNew.h>
 #include <vtkRenderWindow.h>
@@ -101,6 +103,7 @@ private:
     QSlider* opacitySingularitySlider;
     QDoubleSpinBox* opacitySingularitySpinBox;
     QComboBox* sheetCellDataFieldComboBox;
+    QComboBox* sheetDisplayTypeComboBox;
     ///////////////////////////////////
     // vtk member variables
     vtkNew<vtkPolyDataReader> m_vtkBaseComplexReader;
@@ -111,31 +114,36 @@ private:
     vtkNew<vtkActor> m_vtkActor;
     vtkNew<vtkActor> m_vtkBaseComplexActor;
     vtkNew<vtkActor> m_vtkSingularityActor;
+    vtkNew<vtkActor> m_vtkSingularityVActor;
+    vtkNew<vtkActor> m_vtkSingularityEActor;
     vtkRenderer* m_renderer;
     vtkNew<InteractorStyleTrackballCamera> m_mouseInteractorStyle;
 
-    LoadingThread * componentLoadingThread;
-    LoadingThread * chordLoadingThread;
-    LoadingThread * sheetLoadingThread;
-    LoadingThread * chordFaceAndEdgeLoadingThread;
-    LoadingThread * chordCurveLoadingThread;
-    LoadingThread * sheetFaceAndEdgeLoadingThread;
-    LoadingThread * sheetDualLoadingThread;
-    LoadingThread * faceSegmentLoadingThread;
-    LoadingThread * singularFacesLoadingThread;
-    LoadingThread * sliceLoadingThread;
+    LoadingThread * componentLoadingThread = NULL;
+    LoadingThread * chordLoadingThread = NULL;
+    LoadingThread * sheetLoadingThread = NULL;
+    LoadingThread * chordFaceAndEdgeLoadingThread = NULL;
+    LoadingThread * chordCurveLoadingThread = NULL;
+    LoadingThread * sheetFaceAndEdgeLoadingThread = NULL;
+    LoadingThread * sheetDualLoadingThread = NULL;
+    LoadingThread * quadDualLoadingThread = NULL;
+    LoadingThread * faceSegmentLoadingThread = NULL;
+    LoadingThread * singularFacesLoadingThread = NULL;
+    LoadingThread * sliceLoadingThread = NULL;
 
-    QThread * componentThread;
-    QThread * chordThread;
-    QThread * sheetThread;
-    QThread * chordFaceAndEdgeThread;
-    QThread * chordCurveThread;
-    QThread * sheetFaceAndEdgeThread;
-    QThread * sheetDualThread;
-    QThread * faceSegmentThread;
-    QThread * singularFacesThread;
-    QThread * sliceThread;
+    QThread * componentThread = NULL;
+    QThread * chordThread = NULL;
+    QThread * sheetThread = NULL;
+    QThread * chordFaceAndEdgeThread = NULL;
+    QThread * chordCurveThread = NULL;
+    QThread * sheetFaceAndEdgeThread = NULL;
+    QThread * sheetDualThread = NULL;
+    QThread * quadDualThread = NULL;
+    QThread * faceSegmentThread = NULL;
+    QThread * singularFacesThread = NULL;
+    QThread * sliceThread = NULL;
 
+    QTimer* m_timer;
 private:
     void createActions();
     void createMenus();
@@ -153,6 +161,8 @@ public:
     virtual std::vector<std::vector<int> > GetScalarFields(vtkSmartPointer<vtkPolyDataReader> pReader, int numOfFields = 1);
     virtual void AddBaseComplexActor(const char* filename);
     virtual void AddSingularityActor(const char* filename);
+    virtual void AddSingularityVActor(const char* filename);
+    virtual void AddSingularityEActor(const char* filename);
     //virtual void DisplaySheets(const std::vector<int>& sheetIndices);
     virtual void DeactivateAllSheets();
     virtual bool IsSheetsEmpty() const;
@@ -194,7 +204,10 @@ private slots:
     virtual void on_opacitySingularityChanged(double val);
 
     void on_sheetCellDataFieldCurrentIndexChanged(int index);
+    void on_sheetDisplyTypeCurrentIndexChanged(int index);
     virtual void on_ModelClicked(QListWidgetItem* item);
+public slots:
+    void TimerHandlerFunction();
 };
 extern MainWindow* g_mainWindow;
 extern Ui::MainWindow* g_ui;

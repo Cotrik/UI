@@ -28,7 +28,7 @@ void ModelBrowser::resizeEvent(QResizeEvent *event)
 void ModelBrowser::loadModels(const char* path) {
     listWidget->clear();
     filenames.clear();
-    QDirIterator directories(path, QDir::Dirs | QDir::NoSymLinks | QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags/*QDirIterator::Subdirectories*/);
+    QDirIterator directories(path, QDir::Dirs | /*QDir::NoSymLinks |*/ QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags/*QDirIterator::Subdirectories*/);
     while (directories.hasNext()) {
         directories.next();
         std::string filename = directories.filePath().toStdString();
@@ -41,4 +41,5 @@ void ModelBrowser::loadModels(const char* path) {
         listWidget->addItem(item);
         //listWidget->setItemWidget(it, new QRadioButton(tr("Item 2")));
     }
+    listWidget->sortItems(Qt::AscendingOrder);
 }
