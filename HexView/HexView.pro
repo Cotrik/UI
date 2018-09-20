@@ -20,7 +20,8 @@ SOURCES +=\
     MouseInteractorStyle.cpp \
     HexDockWidget.cpp \
     ModelBrowser.cpp \
-    SheetDecompositionsDockWidget.cpp
+    SheetDecompositionsDockWidget.cpp \
+    MatrixDockWidget.cpp
 
 HEADERS  += mainwindow.h \
     MouseInteractorStyle.h \
@@ -29,12 +30,13 @@ HEADERS  += mainwindow.h \
     ui_mainwindow.h \
     HexDockWidget.h \
     ModelBrowser.h \
-    SheetDecompositionsDockWidget.h
+    SheetDecompositionsDockWidget.h \
+    MatrixDockWidget.h
 
 FORMS    += \
     mainwindow.ui
 
-INCLUDEPATH += "/usr/local/include/vtk-6.3"
+INCLUDEPATH += "/usr/local/include/vtk-8.0"
 LIBS += ${VTK_LIBRARIES}
 
 RESOURCES += \
@@ -44,4 +46,5 @@ OTHER_FILES += \
     view.qml
 
 DISTFILES += \
-    CMakeLists.txt
+    CMakeLists.txt \
+    config.xml

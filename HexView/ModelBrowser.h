@@ -11,22 +11,6 @@
 #include <QTreeWidget>
 #include <QBrush>
 #include <QtCore/QVariant>
-//#include <QtGui/QAction>
-//#include <QtGui/QApplication>
-//#include <QtGui/QButtonGroup>
-//#include <QtGui/QComboBox>
-//#include <QtGui/QDockWidget>
-//#include <QtGui/QDoubleSpinBox>
-//#include <QtGui/QHeaderView>
-//#include <QtGui/QLabel>
-//#include <QtGui/QListWidget>
-//#include <QtGui/QMainWindow>
-//#include <QtGui/QMenuBar>
-//#include <QtGui/QSlider>
-//#include <QtGui/QStatusBar>
-//#include <QtGui/QToolBar>
-//#include <QtGui/QTreeWidget>
-
 #include <QAction>
 #include <QApplication>
 #include <QButtonGroup>
@@ -42,7 +26,6 @@
 #include <QStatusBar>
 #include <QToolBar>
 #include <QTreeWidget>
-#include <QWidget>
 
 class ModelBrowser : public QDockWidget
 {

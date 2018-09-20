@@ -73,7 +73,7 @@ HexDockWidget::HexDockWidget(QMainWindow* &MainWindow, QString name, Qt::DockWid
     : QDockWidget(name, MainWindow)
     , qvtkWidget(qvtkWidget)
     , m_renderer(renderer)
-    , loadingBar(NULL)
+    , loadingBar(nullptr)
     , numOfListItems(0)
     , isPolyData(isPolyData)
 {
@@ -121,7 +121,7 @@ void HexDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
     Label = new QLabel(Widget);
     Label->setObjectName(QString::fromUtf8("Opacity"));
     Label->setGeometry(QRect(5, 32, 67, 17));
-    Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
+    //Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
     OpacitySpinBox = new QDoubleSpinBox(Widget);
     OpacitySpinBox->setObjectName(name + QString::fromUtf8("OpacitySpinBox"));
     OpacitySpinBox->setGeometry(QRect(130, 32, 71, 27));
@@ -187,6 +187,8 @@ void HexDockWidget::on_DisplayCurrentIndexChanged(int index) {
             m_vtkActors.at(id)->GetProperty()->SetEdgeColor(0, 0, 0);
             if (isQuadDual)
                 m_vtkActors.at(id)->GetProperty()->SetLineWidth(8);
+            else if (isSingularity)
+                m_vtkActors.at(id)->GetProperty()->SetLineWidth(6);
             else
                 m_vtkActors.at(id)->GetProperty()->SetLineWidth(2);
             m_vtkActors.at(id)->GetProperty()->SetRepresentationToSurface();
@@ -254,7 +256,7 @@ void HexDockWidget::on_Clicked(QListWidgetItem * item) {
 }
 
 void HexDockWidget::on_CurrentItemChanged(QListWidgetItem *current, QListWidgetItem *previous) {
-    if (current != NULL) {
+    if (current != nullptr) {
         std::string currentstr = current->text().toStdString();
         int currentpos = currentstr.find_first_of('_');
         int currentid = QString(currentstr.substr(currentpos + 1).c_str()).toInt();
@@ -262,7 +264,7 @@ void HexDockWidget::on_CurrentItemChanged(QListWidgetItem *current, QListWidgetI
         //else m_renderer->AddActor(m_vtkActors.at(currentid));
         else m_renderer->AddActor(m_vtkActors.at(listid_id[currentid]));
     }
-    if (previous != NULL) {
+    if (previous != nullptr) {
         std::string previousstr = previous->text().toStdString();
         int previouspos = previousstr.find_first_of('_');
         int previousid = QString(previousstr.substr(previouspos + 1).c_str()).toInt();
@@ -358,28 +360,61 @@ void HexDockWidget::AddUnstructedGridActor(const char* filename, const int id, s
     vtkSmartPointer<vtkUnstructuredGridReader> reader = vtkSmartPointer<vtkUnstructuredGridReader>::New();
     reader->SetFileName(filename);
     reader->Update();
-    //////////////////////////////////
-    // Create the color map
-    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
-    cellDataFields.push_back(GetScalarFields(reader));
-    colorLookupTable->SetTableRange(0, numOfListItems);
-    colorLookupTable->Build();
-    // Generate the colors for each point based on the color map
-    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
-    colors->SetNumberOfComponents(3);
-    colors->SetName("Colors");
+    if (isSingularity) {
+        auto cellDatas = GetScalarFields(reader, 1);
+        cout << "number of cellDatas = " << cellDatas.size() << endl;
+        vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+        colorLookupTable->SetTableRange(0, 8);
+        colorLookupTable->Build();
+        // Generate the colors for each point based on the color map
+        vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+        colors->SetNumberOfComponents(3);
+        colors->SetName("Colors");
 
-    double dcolor[3];
-    colorLookupTable->GetColor(id, dcolor);
-    unsigned char color[3];
-    for(unsigned int j = 0; j < 3; j++)
-        color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+        double dcolor_valence[8][3] =
+        {{0, 0, 1.0},
+        {1.0, 1.0, 1.0},
+        {0, 1.0, 0},
+        {0, 1.0, 1.0},
+        {1.0, 1.0, 0},
+        {1.0, 0, 0.0},
+        {1.0, 0, 1.0},
+        {0.0, 0, 0.0}};
 
-    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
-        //colors->InsertNextTupleValue(color);
-        colors->InsertNextTypedTuple(color);
+        //colorLookupTable->GetColor(0, dcolor);
+        unsigned char color_valence[8][3];
+        for(unsigned int i = 0; i < 8; i++)
+            for(unsigned int j = 0; j < 3; j++)
+                color_valence[i][j] = static_cast<unsigned char>(255.0 * dcolor_valence[i][j]);
 
-    reader->GetOutput()->GetCellData()->SetScalars(colors);
+        for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+            colors->InsertNextTypedTuple(color_valence[cellDatas[0][i] - 1]);
+
+        reader->GetOutput()->GetCellData()->SetScalars(colors);
+    } else {
+        //////////////////////////////////
+        // Create the color map
+        vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+        cellDataFields.push_back(GetScalarFields(reader));
+        colorLookupTable->SetTableRange(0, numOfListItems);
+        colorLookupTable->Build();
+        // Generate the colors for each point based on the color map
+        vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+        colors->SetNumberOfComponents(3);
+        colors->SetName("Colors");
+
+        double dcolor[3];
+        colorLookupTable->GetColor(id, dcolor);
+        unsigned char color[3];
+        for(unsigned int j = 0; j < 3; j++)
+            color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+
+        for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+            //colors->InsertNextTupleValue(color);
+            colors->InsertNextTypedTuple(color);
+
+        reader->GetOutput()->GetCellData()->SetScalars(colors);
+    }
     //////////////////////////////////
     vtkSmartPointer<vtkDataSetMapper> mapper = vtkSmartPointer<vtkDataSetMapper>::New();
     mapper->SetInputConnection(reader->GetOutputPort());

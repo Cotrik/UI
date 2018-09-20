@@ -1,7 +1,7 @@
 <!-- <?xml version="1.0" encoding="UTF-8"?> -->
 <HexDockWidgets>
 <!-- Left -->
-<!--
+
 <HexDockWidget>
     <Name>Component</Name>
     <DockWidgetArea>left</DockWidgetArea>
@@ -10,7 +10,6 @@
     <Icon>volume.png</Icon>
     <Description>Component DockWidget</Description>
 </HexDockWidget>
-
 <HexDockWidget>
     <Name>Chord</Name>
     <DockWidgetArea>left</DockWidgetArea>
@@ -19,7 +18,6 @@
     <Icon>chord.png</Icon>
     <description>Chord DockWidget</description>
 </HexDockWidget>
--->
 <HexDockWidget>
     <Name>Sheet</Name>
     <DockWidgetArea>left</DockWidgetArea>
@@ -68,6 +66,14 @@
     <Prefix>QuadDual</Prefix>
     <Icon>dual.png</Icon>
     <description>QuadDual DockWidget</description>
+</HexDockWidget>
+<HexDockWidget>
+    <Name>SheetCellsConnectedSingularities</Name>
+    <DockWidgetArea>right</DockWidgetArea>
+    <IsPolyData>false</IsPolyData>
+    <Prefix>SheetConnectedSingularities</Prefix>
+    <Icon>sheets.png</Icon>
+    <description>SheetCellsConnectedSingularities DockWidget</description>
 </HexDockWidget>
 <!--HexDockWidget>
     <Name>FaceSegment</Name>

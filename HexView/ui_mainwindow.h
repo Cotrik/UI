@@ -10,22 +10,6 @@
 #define UI_MAINWINDOW_H
 
 #include <QtCore/QVariant>
-//#include <QtGui/QAction>
-//#include <QtGui/QApplication>
-//#include <QtGui/QButtonGroup>
-//#include <QtGui/QComboBox>
-//#include <QtGui/QDockWidget>
-//#include <QtGui/QDoubleSpinBox>
-//#include <QtGui/QHeaderView>
-//#include <QtGui/QLabel>
-//#include <QtGui/QListWidget>
-//#include <QtGui/QMainWindow>
-//#include <QtGui/QMenuBar>
-//#include <QtGui/QSlider>
-//#include <QtGui/QStatusBar>
-//#include <QtGui/QToolBar>
-//#include <QtGui/QTreeWidget>
-//#include <QtGui/QWidget>
 #include <QAction>
 #include <QApplication>
 #include <QButtonGroup>
@@ -72,23 +56,24 @@ public:
     QStatusBar *statusBar;
     QXmlStreamReader* config;
 
-    HexDockWidget* componentDockWidget = NULL;
-    HexDockWidget* chordDockWidget = NULL;
-    HexDockWidget* sheetDockWidget = NULL;
-    HexDockWidget* sheetFaceAndEdgeDockWidget = NULL;
-    HexDockWidget* sheetDualDockWidget = NULL;
-    HexDockWidget* chordFaceAndEdgeDockWidget = NULL;
-    HexDockWidget* chordCurveDockWidget = NULL;
-    HexDockWidget* faceSegmentDockWidget = NULL;
-    HexDockWidget* singularFacesDockWidget = NULL;
-    HexDockWidget* sliceDockWidget = NULL;
-    HexDockWidget* quadDualDockWidget = NULL;
-    MatrixDockWidget* matrixDockWidget = NULL;
+    HexDockWidget* componentDockWidget = nullptr;
+    HexDockWidget* chordDockWidget = nullptr;
+    HexDockWidget* sheetDockWidget = nullptr;
+    HexDockWidget* sheetFaceAndEdgeDockWidget = nullptr;
+    HexDockWidget* sheetDualDockWidget = nullptr;
+    HexDockWidget* chordFaceAndEdgeDockWidget = nullptr;
+    HexDockWidget* chordCurveDockWidget = nullptr;
+    HexDockWidget* faceSegmentDockWidget = nullptr;
+    HexDockWidget* singularFacesDockWidget = nullptr;
+    HexDockWidget* sliceDockWidget = nullptr;
+    HexDockWidget* quadDualDockWidget = nullptr;
+    MatrixDockWidget* matrixDockWidget = nullptr;
+    HexDockWidget* sheetCellsConnectedSingularitiesDockWidget = nullptr;
     //HexDockWidget* componentFaceAndEdgeDockWidget;
     std::vector<HexDockWidget*> docWidgets;
     std::vector<HexDockWidgetInfo> docWidgetInfo;
     ModelBrowser* modelBrowser;
-    SheetDecompositionsDockWidget* sheetDecompositionsDockWidget = NULL;
+    SheetDecompositionsDockWidget* sheetDecompositionsDockWidget = nullptr;
     //QProgressBar* loadingBar;
 //    QComboBox* sheetCellDataFieldComboBox;
     void setupUi(QMainWindow *MainWindow) {
@@ -141,6 +126,10 @@ public:
                 quadDualDockWidget = new HexDockWidget(MainWindow, QString("QuadDual"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
                 quadDualDockWidget->isQuadDual = true;
             }
+            else if (info.name == "SheetCellsConnectedSingularities") {
+                sheetCellsConnectedSingularitiesDockWidget = new HexDockWidget(MainWindow, QString("SheetCellsSingularities"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer);
+                sheetCellsConnectedSingularitiesDockWidget->isSingularity = true;
+            }
             else if (info.name == "FaceSegment")
                 faceSegmentDockWidget = new HexDockWidget(MainWindow, QString("FaceSegment"), Qt::RightDockWidgetArea, qvtkWidget, m_renderer, true);
             else if (info.name == "SingularFaces")
@@ -168,7 +157,7 @@ public:
     } // setupUi
 
     void retranslateUi(QMainWindow *MainWindow) {
-        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0, /*QApplication::UnicodeUTF8*/0));
+        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0/*, QApplication::UnicodeUTF80*/));
     }
 
     void readConfigXml() {

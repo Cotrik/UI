@@ -28,7 +28,11 @@
 #include <vtkProperty.h>
 #include <vtkLookupTable.h>
 #include <vtkCellData.h>
+#include <vtkPointData.h>
 #include <vtkColorTransferFunction.h>
+#include <vtkFloatArray.h>
+#include <vtkDoubleArray.h>
+#include <vtkScalarBarActor.h>
 
 #include <unordered_set>
 #include <set>
@@ -43,8 +47,46 @@ enum SheetCellDataField{
     MAIN_SHEET
 };
 
-MainWindow* g_mainWindow = NULL;
-Ui::MainWindow* g_ui = NULL;
+MainWindow* g_mainWindow = nullptr;
+Ui::MainWindow* g_ui = nullptr;
+
+const unsigned char char_html_colors[16][3] = {
+    {255, 255, 255},    // WHITE,   #FFFFFF RGB(255, 255, 255)
+    {192, 192, 192},    // SILVER,  #C0C0C0	RGB(192, 192, 192)
+    {128, 128, 128},    // GRAY,    #808080	RGB(128, 128, 128)
+    {  0,   0,   0},    // BLACK,   #000000	RGB(0, 0, 0)
+    {255,   0,   0},    // RED,     #FF0000	RGB(255, 0, 0)
+    {128,   0,   0},    // MAROON,  #800000	RGB(128, 0, 0)
+    {255, 255,   0},    // YELLOW,  #FFFF00	RGB(255, 255, 0)
+    {128, 128,   0},    // OLIVE,   #808000	RGB(128, 128, 0)
+    {  0, 255,   0},    // LIME,    #00FF00	RGB(0, 255, 0)
+    {  0, 128,   0},    // GREEN,   #008000	RGB(0, 128, 0)
+    {  0, 255, 255},    // AQUA,    #00FFFF	RGB(0, 255, 255)
+    {  0, 128, 128},    // TEAL,    #008080	RGB(0, 128, 128)
+    {  0,   0, 255},    // BLUE,    #0000FF	RGB(0, 0, 255)
+    {  0,   0, 128},    // NAVY,    #000080	RGB(0, 0, 128)
+    {255,   0, 255},    // FUCHSIA, #FF00FF	RGB(255, 0, 255))
+    {128,   0, 128}     // PURPLE,  #800080	RGB(128, 0, 128))
+};
+
+const double double_html_colors[16][3] = {
+    {1.00, 1.00, 1.00}, // {255, 255, 255},
+    {0.75, 0.75, 0.75}, // {192, 192, 192},
+    {0.50, 0.50, 0.50}, // {128, 128, 128},
+    {0.00, 0.00, 0.00}, // {0.00, 0.00, 0.00},
+    {1.00, 0.00, 0.00}, // {255, 0, 0},
+    {0.50, 0.00, 0.00}, // {128, 0, 0},
+    {1.00, 1.00, 0.00}, // {255, 255, 0},
+    {0.50, 0.50, 0.00}, // {128, 128, 0},
+    {0.00, 1.00, 0.00}, // {0, 255, 0},
+    {0.00, 0.50, 0.00}, // {0, 128, 0},
+    {0.00, 1.00, 1.00}, // {0, 255, 255},
+    {0.00, 0.50, 0.50}, // {0, 128, 128},
+    {0.00, 0.00, 1.00}, // {0, 0, 255},
+    {0.00, 0.00, 0.50}, // {0, 0, 128},
+    {1.00, 0.00, 1.00}, // {255, 0, 255},
+    {0.50, 0.00, 0.50}, // {128, 0, 128}
+};
 
 static void GetColorPixmap(unsigned char color[3], QPixmap& pixmap)
 {
@@ -278,7 +320,7 @@ void MainWindow::createToolBars()
 //    QRect r = opacitySingularitySlider->geometry();
 //    opacitySingularitySlider->setGeometry(r.x(), r.y(), 100, r.height());
     //////////////////////////////////////
-    QAction* opacity = new QAction(QString("Opacity:"), 0);
+    QAction* opacity = new QAction(QString("Opacity:"), nullptr);
     toolBar->addAction(opacity);
     toolBar->addWidget(opacitySlider);
     toolBar->addWidget(opacitySpinBox);
@@ -287,15 +329,24 @@ void MainWindow::createToolBars()
     toolBar->addAction(sheetListAction);
     toolBar->addAction(componentListAction);
     toolBar->addAction(baseComplexAction);
-    QAction* opacityBaseComplex = new QAction(QString("Opacity:"), 0);
+    QAction* opacityBaseComplex = new QAction(QString("Opacity:"), nullptr);
     toolBar->addAction(opacityBaseComplex);
     toolBar->addWidget(opacityBaseComplexSlider);
     toolBar->addWidget(opacityBaseComplexSpinBox);
     toolBar->addAction(singularityAction);
-    QAction* opacitySingularity = new QAction(QString("Opacity:"), 0);
+    QAction* opacitySingularity = new QAction(QString("Opacity:"), nullptr);
     toolBar->addAction(opacitySingularity);
     toolBar->addWidget(opacitySingularitySlider);
     toolBar->addWidget(opacitySingularitySpinBox);
+
+    singularityDisplayTypeComboBox = new QComboBox;
+    singularityDisplayTypeComboBox->setObjectName(QString::fromUtf8("sheetCellDataFieldComboBox"));
+    singularityDisplayTypeComboBox->setGeometry(QRect(0, 0, 200, 27));
+    singularityDisplayTypeComboBox->addItem(QIcon("../icon/sheets.png"), QString("Valence"));
+    singularityDisplayTypeComboBox->addItem(QIcon("../icon/sheet.png"), QString("Index"));
+    singularityDisplayTypeComboBox->setCurrentIndex(1);
+    QObject::connect(singularityDisplayTypeComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(on_singularityDisplyTypeCurrentIndexChanged(int)));
+    toolBar->addWidget(singularityDisplayTypeComboBox);
 
     sheetCellDataFieldComboBox = new QComboBox;
     sheetCellDataFieldComboBox->setObjectName(QString::fromUtf8("sheetCellDataFieldComboBox"));
@@ -318,14 +369,14 @@ void MainWindow::createToolBars()
     QObject::connect(openFolderAction, SIGNAL(triggered()), this, SLOT(on_openFolder_clicked()));
     toolBar->addAction(openFolderAction);
 
-    if (ui->componentDockWidget != NULL) {
+    if (ui->componentDockWidget != nullptr) {
         sheetsSetAction = new QAction(tr("&SheetsSet"), this);
         sheetsSetAction->setIcon(QIcon("../icon/check.png"));
         sheetsSetAction->setStatusTip(tr("Extract Minimal Sheets Set"));
         QObject::connect(sheetsSetAction, SIGNAL(triggered()), this, SLOT(on_sheetsSet_clicked()));
         toolBar->addAction(sheetsSetAction);
     }
-    if (ui->componentDockWidget != NULL) {
+    if (ui->componentDockWidget != nullptr) {
         ui->componentDockWidget->loadingBar = new QProgressBar;
         ui->componentDockWidget->loadingBar->setOrientation(Qt::Horizontal);
         ui->componentDockWidget->loadingBar->setRange(0, 100);
@@ -663,6 +714,152 @@ std::vector<std::vector<int> > MainWindow::GetScalarFields(vtkSmartPointer<vtkPo
     return fields;
 }
 
+std::vector<std::vector<double> > MainWindow::GetDoubleScalarFields(vtkSmartPointer<vtkPolyDataReader> pReader, int numOfFields)
+{
+    std::vector<std::vector<double> > fields;
+    for (int f = 0; f < numOfFields; f++) {
+        vtkCellData* cellData = pReader->GetOutput()->GetCellData();
+        pReader->SetScalarsName(pReader->GetScalarsNameInFile(f));
+        pReader->Update();
+        cellData->Update();
+        vtkDataSetAttributes* attribute = vtkDataSetAttributes::SafeDownCast(cellData);
+        vtkDoubleArray* scalarDataInt = vtkDoubleArray::SafeDownCast(attribute->GetScalars(pReader->GetScalarsNameInFile(f)));
+        if (scalarDataInt) {
+            int nc = scalarDataInt->GetNumberOfTuples();
+            std::vector<double> scalarField(nc);
+            for (int i = 0; i < nc; i++)
+                scalarField.at(i) = scalarDataInt->GetValue(i);
+            fields.push_back(scalarField);
+        }
+    }
+    return fields;
+}
+
+std::vector<double> MainWindow::GetDoubleScalarField(vtkSmartPointer<vtkPolyDataReader> pReader, std::string fieldname, int numOfFields)
+{
+    std::vector<double> field;
+    for (int f = 0; f < numOfFields; f++) {
+        vtkCellData* cellData = pReader->GetOutput()->GetCellData();
+        pReader->SetScalarsName(pReader->GetScalarsNameInFile(f));
+        pReader->Update();
+        cellData->Update();
+        vtkDataSetAttributes* attribute = vtkDataSetAttributes::SafeDownCast(cellData);
+        vtkDoubleArray* scalarDataInt = vtkDoubleArray::SafeDownCast(attribute->GetScalars(pReader->GetScalarsNameInFile(f)));
+        if (scalarDataInt) {
+            int nc = scalarDataInt->GetNumberOfTuples();
+            std::vector<double> scalarField(nc);
+            for (int i = 0; i < nc; i++)
+                scalarField.at(i) = scalarDataInt->GetValue(i);
+            field = scalarField;
+        }
+        if (std::string(pReader->GetScalarsNameInFile(f)) == fieldname) break;
+    }
+    return field;
+}
+
+VTKData MainWindow::GetAllData(vtkPolyData* polydata) {
+    std::cout << "Normals: " << polydata->GetPointData()->GetNormals() << std::endl;
+
+    vtkIdType numberOfPointArrays = polydata->GetPointData()->GetNumberOfArrays();
+    std::cout << "Number of PointData arrays: " << numberOfPointArrays << std::endl;
+
+    vtkIdType numberOfCellArrays = polydata->GetCellData()->GetNumberOfArrays();
+    std::cout << "Number of CellData arrays: " << numberOfCellArrays << std::endl;
+
+    std::cout << "Type table/key: " << std::endl;;
+    //more values can be found in <VTK_DIR>/Common/vtkSetGet.h
+    std::cout << VTK_UNSIGNED_CHAR << " unsigned char" << std::endl;
+    std::cout << VTK_UNSIGNED_INT << " unsigned int" << std::endl;
+    std::cout << VTK_FLOAT << " float" << std::endl;
+    std::cout << VTK_DOUBLE << " double" << std::endl;
+
+    VTKData res;
+    for(vtkIdType i = 0; i < numberOfPointArrays; i++) {
+        // The following two lines are equivalent
+        //arrayNames.push_back(polydata->GetPointData()->GetArray(i)->GetName());
+        //arrayNames.push_back(polydata->GetPointData()->GetArrayName(i));
+        int dataTypeID = polydata->GetPointData()->GetArray(i)->GetDataType();
+        std::cout << "Array " << i << ": " << polydata->GetPointData()->GetArrayName(i)
+                  << " (type: " << dataTypeID << ")" << std::endl;
+        auto name = polydata->GetPointData()->GetArrayName(i);
+        vtkPointData* data = polydata->GetPointData();
+        vtkDataSetAttributes* attribute = vtkDataSetAttributes::SafeDownCast(data);
+
+        if (dataTypeID == VTK_INT) {
+            vtkIntArray* scalarData = vtkIntArray::SafeDownCast(attribute->GetScalars(name));
+            if (scalarData) {
+                Data field(name);
+                int nc = scalarData->GetNumberOfTuples();
+                field.intData.resize(nc);
+                for (int i = 0; i < nc; i++)
+                    field.intData.at(i) = scalarData->GetValue(i);
+                res.pointsData.push_back(field);
+            }
+        } else if (dataTypeID == VTK_FLOAT) {
+            vtkFloatArray* scalarData = vtkFloatArray::SafeDownCast(attribute->GetScalars(name));
+            if (scalarData) {
+                Data field(name);
+                int nc = scalarData->GetNumberOfTuples();
+                field.floatData.resize(nc);
+                for (int i = 0; i < nc; i++)
+                    field.intData.at(i) = scalarData->GetValue(i);
+                res.pointsData.push_back(field);
+            }
+        } else if (dataTypeID == VTK_DOUBLE) {
+            vtkDoubleArray* scalarData = vtkDoubleArray::SafeDownCast(attribute->GetScalars(name));
+            if (scalarData) {
+                Data field(name);
+                int nc = scalarData->GetNumberOfTuples();
+                field.floatData.resize(nc);
+                for (int i = 0; i < nc; i++)
+                    field.doubleData.at(i) = scalarData->GetValue(i);
+                res.pointsData.push_back(field);
+            }
+        }
+    }
+
+    for(vtkIdType i = 0; i < numberOfCellArrays; i++)
+    {
+        int dataTypeID = polydata->GetCellData()->GetArray(i)->GetDataType();
+        std::cout << "Array " << i << ": " << polydata->GetCellData()->GetArrayName(i)
+                  << " (type: " << dataTypeID << ")" << std::endl;
+        auto name = polydata->GetCellData()->GetArrayName(i);
+        vtkCellData* data = polydata->GetCellData();
+        vtkDataSetAttributes* attribute = vtkDataSetAttributes::SafeDownCast(data);
+
+        if (dataTypeID == VTK_INT) {
+            vtkIntArray* scalarData = vtkIntArray::SafeDownCast(attribute->GetScalars(name));
+            if (scalarData) {
+                Data field(name);
+                int nc = scalarData->GetNumberOfTuples();
+                field.intData.resize(nc);
+                for (int i = 0; i < nc; i++)
+                    field.intData.at(i) = scalarData->GetValue(i);
+                res.cellsData.push_back(field);
+            }
+        } else if (dataTypeID == VTK_FLOAT) {
+            vtkFloatArray* scalarData = vtkFloatArray::SafeDownCast(attribute->GetScalars(name));
+            if (scalarData) {
+                Data field(name);
+                int nc = scalarData->GetNumberOfTuples();
+                field.floatData.resize(nc);
+                for (int i = 0; i < nc; i++)
+                    field.intData.at(i) = scalarData->GetValue(i);
+                res.cellsData.push_back(field);
+            }
+        } else if (dataTypeID == VTK_DOUBLE) {
+            vtkDoubleArray* scalarData = vtkDoubleArray::SafeDownCast(attribute->GetScalars(name));
+            if (scalarData) {
+                Data field(name);
+                int nc = scalarData->GetNumberOfTuples();
+                field.floatData.resize(nc);
+                for (int i = 0; i < nc; i++)
+                    field.doubleData.at(i) = scalarData->GetValue(i);
+                res.cellsData.push_back(field);
+            }
+        }
+    }
+}
 
 void MainWindow::AddBaseComplexActor(const char* filename)
 {
@@ -767,8 +964,208 @@ void MainWindow::AddSingularityActor(const char* filename)
     m_vtkSingularityActor->GetProperty()->SetVertexColor(1, 0, 0);
 }
 
-void MainWindow::AddSingularityVActor(const char* filename)
-{
+//void MainWindow::AddSingularityVActor(const char* filename) {
+//    vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
+//    reader->SetFileName(filename);
+//    reader->Update();
+//    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+//    colorLookupTable->SetTableRange(0, 1);
+//    colorLookupTable->Build();
+//    // Generate the colors for each point based on the color map
+//    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+//    colors->SetNumberOfComponents(3);
+//    colors->SetName("Colors");
+//
+//    double dcolor[3] = { 1.0, 0, 0.0 };
+//    //colorLookupTable->GetColor(0, dcolor);
+//    unsigned char color[3];
+//    for (unsigned int j = 0; j < 3; j++)
+//        color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+//
+//    for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+//        //colors->InsertNextTupleValue(color);
+//        colors->InsertNextTypedTuple(color);
+//
+//    reader->GetOutput()->GetCellData()->SetScalars(colors);
+//
+//    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+//    mapper->SetInputConnection(reader->GetOutputPort());
+//    mapper->ImmediateModeRenderingOn();
+//    m_vtkSingularityVActor.GetPointer()->SetMapper(mapper);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->EdgeVisibilityOn();
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetEdgeColor(1, 1, 0);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetLineWidth(6);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetPointSize(12);
+//    //m_vtkSingularityActor.GetPointer()->GetProperty()->SetColor(1, 0, 0);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetRepresentationToSurface();
+//    m_vtkSingularityVActor->GetProperty()->SetRenderLinesAsTubes(1);
+//    m_vtkSingularityVActor->GetProperty()->SetRenderPointsAsSpheres(1);
+//    //m_vtkSingularityActor->GetProperty()->SetVertexVisibility(1);
+//    m_vtkSingularityVActor->GetProperty()->SetVertexColor(1, 0, 0);
+//}
+
+//void MainWindow::AddSingularityVActor(const char* filename) {
+//    const auto id = singularityDisplayTypeComboBox->currentIndex();
+//    vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
+//    reader->SetFileName(filename);
+//    reader->Update();
+//    vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
+////    colorLookupTable->SetTableRange(0, 1);
+////    colorLookupTable->Build();
+//    // Generate the colors for each point based on the color map
+//    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+//    colors->SetNumberOfComponents(3);
+//    colors->SetName("Colors");
+//    double dcolor[3];
+//    unsigned char color[3];
+//    std::set<int> valences;
+//    std::set<double> indices;
+//    if (id == 0) {
+//        auto cellDataValence = GetScalarFields(reader, 2);
+//        for (auto v : cellDataValence[0])
+//            if (valences.find(v) == valences.end()) valences.insert(v);
+//        // valences.insert(cellDataValence[0].begin(), cellDataValence[0].end());
+//        auto minv = 1000;
+//        auto maxv = -1000;
+//        for (auto v : cellDataValence[0]) {
+//            minv = std::min(v, minv);
+//            maxv = std::max(v, maxv);
+//        }
+//        colorLookupTable->SetTableRange(minv, maxv);
+//        colorLookupTable->Build();
+//        for (int i = 0; i < cellDataValence[0].size(); i++) {
+//            colorLookupTable->GetColor(cellDataValence[0][i], dcolor);
+//            for(unsigned int j = 0; j < 3; j++)
+//                color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+//            colors->InsertNextTypedTuple(color);
+//        }
+//    }
+//    else {
+//        auto cellDatas = GetDoubleScalarField(reader, "index", 2);
+//        indices.insert(cellDatas.begin(), cellDatas.end());
+//        auto minv = 1000.0;
+//        auto maxv = -1000.0;
+//        for (auto v : cellDatas) {
+//            minv = std::min(v, minv);
+//            maxv = std::max(v, maxv);
+//        }
+//        colorLookupTable->SetTableRange(double(minv), double(maxv));
+//        colorLookupTable->Build();
+//        for (int i = 0; i < cellDatas.size(); i++) {
+//            colorLookupTable->GetColor(cellDatas[i], dcolor);
+//            for(unsigned int j = 0; j < 3; j++)
+//                color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
+//            colors->InsertNextTypedTuple(color);
+//        }
+//    }
+//    reader->GetOutput()->GetCellData()->SetScalars(colors);
+//    //m_vtkSingularityVActor.GetPointer()->GetMapper()->GetInput()->GetCellData()->SetScalars(colors);
+
+////    double dcolor_valence[8][3] =
+////    {{0, 0, 1.0},
+////    {1.0, 1.0, 1.0},
+////    {0, 1.0, 0},
+////    {0, 1.0, 1.0},
+////    {1.0, 1.0, 0},
+////    {1.0, 0, 0.0},
+////    {1.0, 0, 1.0},
+////    {0.0, 0, 0.0}};
+////
+////    //colorLookupTable->GetColor(0, dcolor);
+////    unsigned char color_valence[8][3];
+////    for(unsigned int i = 0; i < 8; i++)
+////        for(unsigned int j = 0; j < 3; j++)
+////            color_valence[i][j] = static_cast<unsigned char>(255.0 * dcolor_valence[i][j]);
+////
+////    const auto id = singularityDisplayTypeComboBox->currentIndex();
+////    if (id == 0) {
+////        auto cellDatas = GetScalarFields(reader, 2);
+////        cout << "------------ number of cellDatas = " << cellDatas.size() << endl;
+////        for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+////            colors->InsertNextTypedTuple(color_valence[int(cellDatas[0][i]) - 1]);
+////    }
+////    else {
+////        auto cellDatas = GetDoubleScalarField(reader, "index", 2);
+////        cout << "------------ number of cellDatas = " << cellDatas.size() << endl;
+////        for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+////            colors->InsertNextTypedTuple(color_valence[int(cellDatas[i] * 8) + 1]);
+////    }
+
+////    reader->GetOutput()->GetCellData()->SetScalars(colors);
+
+//    vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+//    mapper->SetInputConnection(reader->GetOutputPort());
+//    mapper->ImmediateModeRenderingOn();
+//    m_vtkSingularityVActor.GetPointer()->SetMapper(mapper);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->EdgeVisibilityOn();
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetEdgeColor(1, 1, 0);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetLineWidth(6);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetPointSize(12);
+//    //m_vtkSingularityActor.GetPointer()->GetProperty()->SetColor(1, 0, 0);
+//    m_vtkSingularityVActor.GetPointer()->GetProperty()->SetRepresentationToSurface();
+//    m_vtkSingularityVActor->GetProperty()->SetRenderLinesAsTubes(1);
+//    m_vtkSingularityVActor->GetProperty()->SetRenderPointsAsSpheres(1);
+//    //m_vtkSingularityActor->GetProperty()->SetVertexVisibility(1);
+//    m_vtkSingularityVActor->GetProperty()->SetVertexColor(1, 0, 0);
+
+//    if (id == 0) {
+//        //vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
+//        scalarBar->SetLookupTable(mapper->GetLookupTable());
+//        scalarBar->SetTitle("Valence");
+//        scalarBar->SetNumberOfLabels(valences.size());
+//        scalarBar->GetLabelTextProperty()->SetColor(0, 0, 0);
+//        scalarBar->GetTitleTextProperty()->SetColor(0, 0, 0);
+
+//        vtkSmartPointer<vtkColorTransferFunction> ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
+//        for (auto v : valences) {
+//            colorLookupTable->GetColor(v, dcolor);
+//            ctf->AddRGBPoint(v, dcolor[0], dcolor[1], dcolor[2]);
+//        }
+////        ctf->AddRGBPoint(1, 0, 0, 1.0);
+////        ctf->AddRGBPoint(2, 1.0, 1.0, 1.0);
+////        ctf->AddRGBPoint(3, 0, 1.0, 0);
+////        ctf->AddRGBPoint(4, 0, 1.0, 1.0);
+////        ctf->AddRGBPoint(5, 1.0, 1.0, 0.0);
+////        ctf->AddRGBPoint(6, 1.0, 0, 0.0);
+////        ctf->AddRGBPoint(7, 1.0, 0, 1.0);
+////        ctf->AddRGBPoint(8, 0.0, 0, 0.0);
+//        ctf->SetColorSpaceToDiverging();
+//        ctf->Build();
+//        mapper->SetLookupTable(ctf);
+//        scalarBar->SetLookupTable(ctf);
+//        //m_renderer->RemoveActor2D(scalarBar.GetPointer());
+//        //m_renderer->AddActor2D(scalarBar.GetPointer());
+//    } else {
+//        //vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
+//        scalarBar->SetLookupTable(mapper->GetLookupTable());
+//        scalarBar->SetTitle("Index");
+//        scalarBar->SetNumberOfLabels(indices.size());
+//        scalarBar->GetLabelTextProperty()->SetColor(0, 0, 0);
+//        scalarBar->GetTitleTextProperty()->SetColor(0, 0, 0);
+
+//        vtkSmartPointer<vtkColorTransferFunction> ctf = vtkSmartPointer<vtkColorTransferFunction>::New();
+
+//        for (auto v : indices) {
+//            colorLookupTable->GetColor(v, dcolor);
+//            ctf->AddRGBPoint(v, dcolor[0], dcolor[1], dcolor[2]);
+//        }
+////        ctf->AddRGBPoint(-0.125, 0, 0, 1.0);
+////        ctf->AddRGBPoint(0, 1.0, 1.0, 1.0);
+////        ctf->AddRGBPoint(0.125, 0, 1.0, 0);
+////        ctf->AddRGBPoint(0.25, 0, 1.0, 1.0);
+////        ctf->AddRGBPoint(0.375, 1.0, 0, 0.0);
+////        ctf->AddRGBPoint(0.5, 1.0, 1.0, 0.0);
+//        ctf->SetColorSpaceToDiverging();
+//        ctf->Build();
+//        mapper->SetLookupTable(ctf);
+//        scalarBar->SetLookupTable(ctf);
+//        //m_renderer->RemoveActor2D(scalarBar.GetPointer());
+//        //m_renderer->AddActor2D(scalarBar.GetPointer());
+//    }
+//}
+
+void MainWindow::AddSingularityVActor(const char* filename) {
+    const auto id = singularityDisplayTypeComboBox->currentIndex();
     vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
     reader->SetFileName(filename);
     reader->Update();
@@ -779,17 +1176,15 @@ void MainWindow::AddSingularityVActor(const char* filename)
     vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
     colors->SetNumberOfComponents(3);
     colors->SetName("Colors");
-
-    double dcolor[3] = {1.0, 0, 0.0};
+    double dcolor[3] = { 1.0, 0, 0.0 };
     //colorLookupTable->GetColor(0, dcolor);
     unsigned char color[3];
-    for(unsigned int j = 0; j < 3; j++)
+    for (unsigned int j = 0; j < 3; j++)
         color[j] = static_cast<unsigned char>(255.0 * dcolor[j]);
 
-    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+    for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
         //colors->InsertNextTupleValue(color);
         colors->InsertNextTypedTuple(color);
-
     reader->GetOutput()->GetCellData()->SetScalars(colors);
 
     vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -813,8 +1208,6 @@ void MainWindow::AddSingularityEActor(const char* filename)
     vtkSmartPointer<vtkPolyDataReader> reader = vtkSmartPointer<vtkPolyDataReader>::New();
     reader->SetFileName(filename);
     reader->Update();
-    auto cellDatas = GetScalarFields(reader, 2);
-    cout << "number of cellDatas = " << cellDatas.size() << endl;
     vtkSmartPointer<vtkLookupTable> colorLookupTable = vtkSmartPointer<vtkLookupTable>::New();
     colorLookupTable->SetTableRange(0, 5);
     colorLookupTable->Build();
@@ -823,27 +1216,35 @@ void MainWindow::AddSingularityEActor(const char* filename)
     colors->SetNumberOfComponents(3);
     colors->SetName("Colors");
 
-    double dcolor_valence1[3] = {0, 0, 1.0};
-    double dcolor_valence3[3] = {0, 1.0, 0};
-    double dcolor_valence5[3] = {1.0, 1.0};
+    double dcolor_valence[8][3] =
+    {{0, 0, 1.0},
+    {1.0, 1.0, 1.0},
+    {0, 1.0, 0},
+    {0, 1.0, 1.0},
+    {1.0, 1.0, 0},
+    {1.0, 0, 0.0},
+    {1.0, 0, 1.0},
+    {0.0, 0, 0.0}};
 
     //colorLookupTable->GetColor(0, dcolor);
-    unsigned char color_valence1[3];
-    unsigned char color_valence3[3];
-    unsigned char color_valence5[3];
-    for(unsigned int j = 0; j < 3; j++) {
-        color_valence1[j] = static_cast<unsigned char>(255.0 * dcolor_valence1[j]);
-        color_valence3[j] = static_cast<unsigned char>(255.0 * dcolor_valence3[j]);
-        color_valence5[j] = static_cast<unsigned char>(255.0 * dcolor_valence5[j]);
-    }
+    unsigned char color_valence[8][3];
+    for(unsigned int i = 0; i < 8; i++)
+        for(unsigned int j = 0; j < 3; j++)
+            color_valence[i][j] = static_cast<unsigned char>(255.0 * dcolor_valence[i][j]);
 
-    for(int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
-        if (cellDatas[1][i] == 1)
-            colors->InsertNextTypedTuple(color_valence1);
-        else if (cellDatas[1][i] == 3)
-            colors->InsertNextTypedTuple(color_valence3);
-        else if (cellDatas[1][i] == 5)
-            colors->InsertNextTypedTuple(color_valence5);
+    const auto id = singularityDisplayTypeComboBox->currentIndex();
+    if (id == 0) {
+        auto cellDatas = GetScalarFields(reader, 3);
+        cout << "------------ number of cellDatas = " << cellDatas.size() << endl;
+        for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+            colors->InsertNextTypedTuple(color_valence[int(cellDatas[1][i]) - 1]);
+    }
+    else {
+        auto cellDatas = GetDoubleScalarField(reader, "index", 3);
+        cout << "------------ number of cellDatas = " << cellDatas.size() << endl;
+        for (int i = 0; i < reader->GetOutput()->GetNumberOfCells(); i++)
+            colors->InsertNextTypedTuple(color_valence[3 - int(cellDatas[i] * 4)]);
+    }
 
     reader->GetOutput()->GetCellData()->SetScalars(colors);
 
@@ -1003,6 +1404,11 @@ void MainWindow::on_sheetListAction_clicked()
         sliceLoadingThread = new LoadingThread(ui->sliceDockWidget, strFolderPath, "Slice", QString("../icon/slice.png"));
         runThread(sliceThread, sliceLoadingThread);
     }
+    if (ui->sheetCellsConnectedSingularitiesDockWidget != NULL) {
+        sheetCellsConnectedSingularitiesThread = new QThread;
+        sheetCellsConnectedSingularitiesLoadingThread = new LoadingThread(ui->sheetCellsConnectedSingularitiesDockWidget, strFolderPath, "SheetConnectedSingularities", QString("../icon/sheets.png"));
+        runThread(sheetCellsConnectedSingularitiesThread, sheetCellsConnectedSingularitiesLoadingThread);
+    }
 //    ui->componentDockWidget->loadListWidgetItems(strFolderPath, "ComponentCells", QString("../icon/volume.png"));
 //    ui->chordDockWidget->loadListWidgetItems(strFolderPath, "ChordCells", QString("../icon/chord.png"));
 //    ui->sheetDockWidget->loadListWidgetItems(strFolderPath, "SheetCells", QString("../icon/sheets.png"));
@@ -1099,11 +1505,13 @@ void MainWindow::on_singularityAction_clicked()
     if (singularityAction->isChecked()) {
         m_renderer->AddActor(m_vtkSingularityVActor.GetPointer());
         m_renderer->AddActor(m_vtkSingularityEActor.GetPointer());
+        m_renderer->AddActor2D(scalarBar.GetPointer());
         //m_mouseInteractorStyle->SetData(m_vtkSingularityReader.GetPointer()->GetOutput());
         m_mouseInteractorStyle->SetData(((vtkPolyDataMapper*) m_vtkSingularityEActor.GetPointer()->GetMapper())->GetInput());
     } else {
         m_renderer->RemoveActor(m_vtkSingularityVActor.GetPointer());
         m_renderer->RemoveActor(m_vtkSingularityEActor.GetPointer());
+        m_renderer->RemoveActor2D(scalarBar.GetPointer());
         m_mouseInteractorStyle->SetData(m_vtkUnstructuredGridReader->GetOutput());
     }
     m_renderer->SetBackground(1, 1, 1);
@@ -1158,14 +1566,19 @@ void MainWindow::on_opacitySingularityChanged(int val)
     opacitySingularitySlider->setValue(val);
     opacitySingularitySpinBox->setValue(dval);
     m_vtkSingularityActor.GetPointer()->GetProperty()->SetOpacity(dval);
+    //m_vtkSingularityVActor.GetPointer()->GetProperty()->SetOpacity(dval);
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->SetOpacity(dval);
     ui->qvtkWidget->update();
 }
+
 void MainWindow::on_opacitySingularityChanged(double val)
 {
     int ival = val*opacitySingularitySlider->maximum();
     opacitySingularitySpinBox->setValue(val);
     opacitySingularitySlider->setValue(ival);
     m_vtkSingularityActor.GetPointer()->GetProperty()->SetOpacity(val);
+    //m_vtkSingularityVActor.GetPointer()->GetProperty()->SetOpacity(val);
+    m_vtkSingularityEActor.GetPointer()->GetProperty()->SetOpacity(val);
     ui->qvtkWidget->update();
 }
 
@@ -1510,6 +1923,12 @@ void MainWindow::on_sheetDisplyTypeCurrentIndexChanged(int index) {
         if (ui->sheetDecompositionsDockWidget && ui->quadDualDockWidget)
             ui->sheetDecompositionsDockWidget->setActors(&ui->quadDualDockWidget->m_vtkActors);
     }
+}
+
+void MainWindow::on_singularityDisplyTypeCurrentIndexChanged(int index) {
+    AddSingularityVActor((QString::fromStdString(strFolderPath) + QString("/singularV.vtk")).toStdString().c_str());
+    AddSingularityEActor((QString::fromStdString(strFolderPath) + QString("/singularE.vtk")).toStdString().c_str());
+    ui->qvtkWidget->update();
 }
 
 void MainWindow::on_ModelClicked(QListWidgetItem * item) {

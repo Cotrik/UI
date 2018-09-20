@@ -13,6 +13,7 @@ ModelBrowser::ModelBrowser(QMainWindow* &MainWindow)
     dockWidgetContents->setObjectName(QString("Models") + QString::fromUtf8("DockWidgetContents"));
     this->setWidget(widget);
     MainWindow->addDockWidget(Qt::LeftDockWidgetArea, this);
+    this->setMinimumWidth(200);
 }
 
 void ModelBrowser::resizeEvent(QResizeEvent *event)

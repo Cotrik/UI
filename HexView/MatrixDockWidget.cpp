@@ -71,6 +71,7 @@ MatrixDockWidget::MatrixDockWidget(QMainWindow* &MainWindow, QString name, Qt::D
     : QDockWidget(name, MainWindow)
     , isPolyData(isPolyData)
 {
+    this->setMinimumWidth(200);
     setupDockWidget(MainWindow, name,
                     widget,
                     label,
@@ -111,7 +112,7 @@ void MatrixDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
     Label = new QLabel(Widget);
     Label->setObjectName(QString::fromUtf8("Opacity"));
     Label->setGeometry(QRect(5, 32, 67, 17));
-    Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
+    //Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
     OpacitySpinBox = new QDoubleSpinBox(Widget);
     OpacitySpinBox->setObjectName(name + QString::fromUtf8("OpacitySpinBox"));
     OpacitySpinBox->setGeometry(QRect(130, 32, 71, 27));
@@ -138,7 +139,7 @@ void MatrixDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
     Label = new QLabel(Widget);
     Label->setObjectName(QString::fromUtf8("Opacity"));
     Label->setGeometry(QRect(5, 32, 67, 17));
-    Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
+    //Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
     this->setObjectName(name + QString::fromUtf8("DockWidget"));
     DockWidgetContents = new QWidget();
     DockWidgetContents->setObjectName(name + QString::fromUtf8("DockWidgetContents"));
