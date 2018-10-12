@@ -1,4 +1,7 @@
 #include "MatrixDockWidget.h"
+#include "circleWidget.h"
+#include "rectWidget.h"
+
 #include <QDir>
 
 #include <vtkVersion.h>
@@ -57,7 +60,10 @@
 #include <vtkCellData.h>
 #include <vtkColorTransferFunction.h>
 
+#include <iostream>
 #include <sstream>
+#include <fstream>
+#include <string>
 
 enum Representation
 {
@@ -79,18 +85,20 @@ MatrixDockWidget::MatrixDockWidget(QMainWindow* &MainWindow, QString name, Qt::D
                     opacitySpinBox,
                     displayComboBox,
                     dockWidgetContents,
+                    layout,
+                    scrollArea,
                     dockWidgetArea);
-    displayComboBox->addItem(QIcon("../icon/surface.png"), QString("Surface"));
-    displayComboBox->addItem(QIcon("../icon/surfaceWithEdges.png"), QString("Surface With Edges"));
-    displayComboBox->addItem(QIcon("../icon/config.png"), QString("Singularity"));
-    displayComboBox->addItem(QIcon("../icon/wireframe.png"), QString("Wireframe"));
-    displayComboBox->setDisabled(true);
+    // displayComboBox->addItem(QIcon("../icon/surface.png"), QString("Surface"));
+    // displayComboBox->addItem(QIcon("../icon/surfaceWithEdges.png"), QString("Surface With Edges"));
+    // displayComboBox->addItem(QIcon("../icon/config.png"), QString("Singularity"));
+    // displayComboBox->addItem(QIcon("../icon/wireframe.png"), QString("Wireframe"));
+    // displayComboBox->setDisabled(true);
 
-    qvtkWidget = new QVTKWidget(widget);
+    // qvtkWidget = new QVTKWidget(widget);
 
-    QObject::connect(displayComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(on_DisplayCurrentIndexChanged(int)));
-    QObject::connect(opacitySlider, SIGNAL(valueChanged(int)), this, SLOT(on_OpacityChanged(int)));
-    QObject::connect(opacitySpinBox, SIGNAL(valueChanged(double)), this, SLOT(on_OpacityChanged(double)));
+    // QObject::connect(displayComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(on_DisplayCurrentIndexChanged(int)));
+    // QObject::connect(opacitySlider, SIGNAL(valueChanged(int)), this, SLOT(on_OpacityChanged(int)));
+    // QObject::connect(opacitySpinBox, SIGNAL(valueChanged(double)), this, SLOT(on_OpacityChanged(double)));
 }
 
 void MatrixDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
@@ -100,50 +108,16 @@ void MatrixDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
                                        QDoubleSpinBox* &OpacitySpinBox,
                                        QComboBox* &DisplayComboBox,
                                        QWidget* &DockWidgetContents,
+                                       QGridLayout* &matrixLayout,
+                                       QScrollArea* &scrollArea,
                                        Qt::DockWidgetArea dockWidgetArea) {
+    
     Widget = new QWidget;
-    OpacitySlider = new QSlider(Widget);
-    OpacitySlider->setObjectName(name + QString::fromUtf8("OpacitySlider"));
-    OpacitySlider->setGeometry(QRect(60, 32, 71, 21));
-    OpacitySlider->setMinimum(0);
-    OpacitySlider->setMaximum(100);
-    OpacitySlider->setValue(100);
-    OpacitySlider->setOrientation(Qt::Horizontal);
-    Label = new QLabel(Widget);
-    Label->setObjectName(QString::fromUtf8("Opacity"));
-    Label->setGeometry(QRect(5, 32, 67, 17));
-    //Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
-    OpacitySpinBox = new QDoubleSpinBox(Widget);
-    OpacitySpinBox->setObjectName(name + QString::fromUtf8("OpacitySpinBox"));
-    OpacitySpinBox->setGeometry(QRect(130, 32, 71, 27));
-    OpacitySpinBox->setMaximum(1);
-    OpacitySpinBox->setValue(1);
-//    ListWidget = new QListWidget(Widget);
-//    ListWidget->setObjectName(name + QString::fromUtf8("ListWidget"));
-//    ListWidget->setGeometry(QRect(5, 70, 220, 450));
-//    ListWidget->setResizeMode(QListView::Adjust);
-//    //ListWidget->setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum);
-//    //ListWidget->setMinimumSize(200, 200);
-    DisplayComboBox = new QComboBox(Widget);
-    DisplayComboBox->setObjectName(name + QString::fromUtf8("DisplayComboBox"));
-    DisplayComboBox->setGeometry(QRect(5, 0, 200, 27));
-    DisplayComboBox->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-    DisplayComboBox->setSizeAdjustPolicy(QComboBox::AdjustToContents);
-    QWidget *centralwidget = new QWidget(Widget);
-    centralwidget->setObjectName(QString::fromUtf8("matrixwidget"));
-    qvtkWidget = new QVTKWidget(centralwidget);
-    qvtkWidget->setObjectName(QString::fromUtf8("qvtkWidget"));
-    qvtkWidget->setGeometry(QRect(10, 70, 500, 500));
-//    qvtkWidget = new QVTKWidget(Widget);
-//    qvtkWidget->setObjectName(QString::fromUtf8("qvtkWidget"));
-    Label = new QLabel(Widget);
-    Label->setObjectName(QString::fromUtf8("Opacity"));
-    Label->setGeometry(QRect(5, 32, 67, 17));
-    //Label->setText(QApplication::translate("MainWindow", "Opacity", 0, /*QApplication::UnicodeUTF8*/0));
-    this->setObjectName(name + QString::fromUtf8("DockWidget"));
-    DockWidgetContents = new QWidget();
-    DockWidgetContents->setObjectName(name + QString::fromUtf8("DockWidgetContents"));
-    this->setWidget(Widget);
+    scrollArea = new QScrollArea();
+    scrollArea->setBackgroundRole(QPalette::Light);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setMaximumHeight(250);
+    this->setWidget(scrollArea);
     MainWindow->addDockWidget(dockWidgetArea, this);
 }
 
@@ -188,4 +162,93 @@ void MatrixDockWidget::on_OpacityChanged(double val) {
     opacitySlider->setValue(ival);
     m_vtkActors->GetProperty()->SetOpacity(val);
     qvtkWidget->update();
+}
+
+void MatrixDockWidget::loadMatrices(QString filename) {
+    std::string str(filename.toStdString());
+    size_t pos = str.find_last_of('/');
+    std::string strFolderLocation = str.substr(0, pos);
+    std::string strFolderPath = strFolderLocation.c_str();
+    // for(int row = 0; row < 10; row++) {
+    //     for (int col = 0; col < 10; col++) {
+    //         // CircleWidget* circle = new CircleWidget((row * 25) + 5, (col * 25) + 5, 20, Widget);
+    //         RectWidget* rect = new RectWidget((row * 25) + 5, (col * 25) + 5, 20, 20, widget);
+    //     }
+    // }
+    
+    adjacentMatrix = getMatrixFromFile(strFolderPath+"/adjacent.mat");
+    hybridMatrix = getMatrixFromFile(strFolderPath+"/hybrid.mat");
+    intersectingMatrix = getMatrixFromFile(strFolderPath+"/intersecting.mat");
+    diagonalMatrix = getMatrixFromFile(strFolderPath+"/diagonal.mat");
+    int n_rows = adjacentMatrix.size() + 1;
+    int n_cols = adjacentMatrix[0].size() + 1;
+
+    // labels for matrix
+    setupMatrixLabels(n_rows, n_cols);
+    populateMatrix(n_rows - 1, n_cols - 1);
+    widget->setMinimumSize(n_rows * 55, n_cols * 55);
+    scrollArea->setWidget(widget);
+}
+
+void MatrixDockWidget::setupMatrixLabels(int n_rows, int n_cols) {
+    for (int i = 0; i < n_rows; i++) {
+        if (i == 1) { n_cols = 1; }
+        for (int j = 0; j < n_cols; j++) {
+            if (i == 0 && j == 0) {
+                QLabel* l = new QLabel("", widget);
+                l->setGeometry(QRect(0, 0, 25, 25));
+            } else if (n_cols == 1) {
+                QLabel* l = new QLabel(QString("%1").arg(i - 1), widget);
+                l->setGeometry(QRect(0, (i * 25) + 5, 25, 25));
+            } else {
+                QLabel* l = new QLabel(QString("%1").arg(j - 1), widget);
+                l->setGeometry(QRect((j * 25) + 5, 0, 25, 25));
+            }
+        }
+    }
+}
+
+void MatrixDockWidget::populateMatrix(int rows, int cols) {
+    for (int i = 1; i <= rows; i++) {
+        for (int j = 1; j <= cols; j++) {
+            if (diagonalMatrix[i - 1][j - 1] > 0) {
+                RectWidget* rect = new RectWidget((i * 25) + 5, (j * 25) + 5, diagonalMatrix[i - 1][j - 1], widget);
+            }
+            if (hybridMatrix[i - 1][j - 1] > 0) {
+                CircleWidget* circle = new CircleWidget((i * 25) + 5, (j * 25) + 5, hybridMatrix[i - 1][j - 1], Qt::red, widget);
+            }
+            if (intersectingMatrix[i - 1][j - 1] > 0) {
+                CircleWidget* circle = new CircleWidget((i * 25) + 5, (j * 25) + 5, intersectingMatrix[i - 1][j - 1], Qt::blue, widget);
+            }
+            if (adjacentMatrix[i - 1][j - 1] > 0) {
+                CircleWidget* circle = new CircleWidget((i * 25) + 5, (j * 25) + 5, adjacentMatrix[i - 1][j - 1], Qt::green, widget);
+            }
+        }
+    }
+}
+
+std::vector<std::vector<double>> MatrixDockWidget::getMatrixFromFile(std::string filename) {
+    std::vector<std::vector<double>> matrix;
+    std::vector<double> temp;
+    std::string line;
+    double input;
+    ifstream inFile;
+    inFile.open(filename);
+    if (!inFile) {
+        cout << "Unable to open file: " + filename << endl;
+    }
+    while (std::getline(inFile, line)) {
+        std::string number;
+        for (int i = 0; i < line.length(); i++) {
+            if (line[i] == '\t' || line[i] == ' ') {
+                temp.push_back(std::stod(number));
+                number = "";
+                continue;
+            }
+            number += line[i];
+        }
+        matrix.push_back(temp);
+        temp.clear();
+    }
+    return matrix;
 }

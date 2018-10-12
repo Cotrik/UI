@@ -1409,6 +1409,9 @@ void MainWindow::on_sheetListAction_clicked()
         sheetCellsConnectedSingularitiesLoadingThread = new LoadingThread(ui->sheetCellsConnectedSingularitiesDockWidget, strFolderPath, "SheetConnectedSingularities", QString("../icon/sheets.png"));
         runThread(sheetCellsConnectedSingularitiesThread, sheetCellsConnectedSingularitiesLoadingThread);
     }
+    if (ui->matrixDockWidget != NULL) {
+        ui->matrixDockWidget->loadMatrices(strFilename);
+    }
 //    ui->componentDockWidget->loadListWidgetItems(strFolderPath, "ComponentCells", QString("../icon/volume.png"));
 //    ui->chordDockWidget->loadListWidgetItems(strFolderPath, "ChordCells", QString("../icon/chord.png"));
 //    ui->sheetDockWidget->loadListWidgetItems(strFolderPath, "SheetCells", QString("../icon/sheets.png"));
