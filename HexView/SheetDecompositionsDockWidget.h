@@ -100,6 +100,9 @@ public:
     QTreeWidgetItem *currentDecompositionItem;
     int currentDecompositionId = 0;
     QTreeWidgetItem *currentSheetItem;
+
+private:
+    QMainWindow *mainWindow;
 };
 
 #endif // SHEET_DECOMPOSITIONS_DOCKWIDGET_H

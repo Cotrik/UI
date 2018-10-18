@@ -1410,7 +1410,8 @@ void MainWindow::on_sheetListAction_clicked()
         runThread(sheetCellsConnectedSingularitiesThread, sheetCellsConnectedSingularitiesLoadingThread);
     }
     if (ui->matrixDockWidget != NULL) {
-        ui->matrixDockWidget->loadMatrices(strFilename);
+        ui->matrixDockWidget->setFilesPath(strFilename);
+        ui->matrixDockWidget->loadMatrices();
     }
 //    ui->componentDockWidget->loadListWidgetItems(strFolderPath, "ComponentCells", QString("../icon/volume.png"));
 //    ui->chordDockWidget->loadListWidgetItems(strFolderPath, "ChordCells", QString("../icon/chord.png"));

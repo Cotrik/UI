@@ -111,13 +111,15 @@ void MatrixDockWidget::setupDockWidget(QMainWindow* &MainWindow, QString name,
                                        QScrollArea* &scrollArea,
                                        Qt::DockWidgetArea dockWidgetArea) {
     
+    mainWindow = MainWindow;
     Widget = new QWidget;
     scrollArea = new QScrollArea();
     scrollArea->setBackgroundRole(QPalette::Light);
     scrollArea->setWidgetResizable(true);
     scrollArea->setMaximumHeight(300);
     this->setWidget(scrollArea);
-    MainWindow->addDockWidget(dockWidgetArea, this);
+    this->setObjectName(name + QString::fromUtf8("DockWidget"));
+    mainWindow->addDockWidget(dockWidgetArea, this);
 }
 
 void MatrixDockWidget::resizeEvent(QResizeEvent *event)
@@ -163,16 +165,19 @@ void MatrixDockWidget::on_OpacityChanged(double val) {
     qvtkWidget->update();
 }
 
-void MatrixDockWidget::loadMatrices(QString filename) {
-    std::string str(filename.toStdString());
+void MatrixDockWidget::setFilesPath(QString path) {
+    std::string str(path.toStdString());
     size_t pos = str.find_last_of('/');
     std::string strFolderLocation = str.substr(0, pos);
     std::string strFolderPath = strFolderLocation.c_str();
+    file_path = strFolderPath;
+}
 
-    adjacentMatrix = getMatrixFromFile(strFolderPath+"/adjacent0.mat");
-    hybridMatrix = getMatrixFromFile(strFolderPath+"/hybrid0.mat");
-    intersectingMatrix = getMatrixFromFile(strFolderPath+"/intersecting0.mat");
-    diagonalMatrix = getMatrixFromFile(strFolderPath+"/diagonal0.mat");
+void MatrixDockWidget::loadMatrices(int index) {
+    adjacentMatrix = getMatrixFromFile(file_path+"/adjacent"+std::to_string(index)+".mat");
+    hybridMatrix = getMatrixFromFile(file_path+"/hybrid"+std::to_string(index)+".mat");
+    intersectingMatrix = getMatrixFromFile(file_path+"/intersecting"+std::to_string(index)+".mat");
+    diagonalMatrix = getMatrixFromFile(file_path+"/diagonal"+std::to_string(index)+".mat");
     int n_rows = adjacentMatrix.size() + 1;
     int n_cols = adjacentMatrix[0].size() + 1;
 
@@ -202,7 +207,7 @@ void MatrixDockWidget::setupMatrixLabels(int n_rows, int n_cols) {
                 y = 0;
                 label = QString("%1").arg(j - 1);
             }
-            matrixWidgetComponent* c = new matrixWidgetComponent(x, y, 1, QString("Label"), widget, Qt::black, label);
+            matrixWidgetComponent* c = new matrixWidgetComponent(x, y, 1, QString("Label"), mainWindow, widget, Qt::black, label);
         }
     }
 }
@@ -211,16 +216,16 @@ void MatrixDockWidget::populateMatrix(int rows, int cols) {
     for (int i = 1; i <= rows; i++) {
         for (int j = 1; j <= cols; j++) {
             if (diagonalMatrix[i - 1][j - 1] > 0) {
-                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, diagonalMatrix[i - 1][j - 1], QString("Rect"), widget, Qt::black);
+                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, diagonalMatrix[i - 1][j - 1], QString("Rect"), mainWindow, widget, Qt::black);
             }
             if (hybridMatrix[i - 1][j - 1] > 0) {
-                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, hybridMatrix[i - 1][j - 1], QString("Circle"), widget, Qt::red);                
+                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, hybridMatrix[i - 1][j - 1], QString("Circle"), mainWindow, widget, Qt::red);                
             }
             if (intersectingMatrix[i - 1][j - 1] > 0) {
-                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, intersectingMatrix[i - 1][j - 1], QString("Circle"), widget, Qt::blue);
+                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, intersectingMatrix[i - 1][j - 1], QString("Circle"), mainWindow, widget, Qt::blue);
             }
             if (adjacentMatrix[i - 1][j - 1] > 0) {
-                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, adjacentMatrix[i - 1][j - 1], QString("Circle"), widget, Qt::green);
+                matrixWidgetComponent* c = new matrixWidgetComponent(i, j, adjacentMatrix[i - 1][j - 1], QString("Circle"), mainWindow, widget, Qt::green);
             }
         }
     }

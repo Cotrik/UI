@@ -63,7 +63,8 @@ public:
             QScrollArea* &scrollArea,
             Qt::DockWidgetArea dockWidgetArea = Qt::LeftDockWidgetArea);
     
-    void loadMatrices(QString filename);
+    void setFilesPath(QString path);
+    void loadMatrices(int index = 0);
     std::vector<std::vector<double>> getMatrixFromFile(std::string filename);
     void setupMatrixLabels(int n_rows, int n_cols);
     void populateMatrix(int rows, int cols);
@@ -71,10 +72,11 @@ public:
     std::vector<std::vector<double>> hybridMatrix;
     std::vector<std::vector<double>> intersectingMatrix;
     std::vector<std::vector<double>> diagonalMatrix;
+    std::string file_path;
 public:
 
 private:
-
+    QMainWindow *mainWindow;
 public slots:
     virtual void resizeEvent(QResizeEvent *event);
     virtual void on_OpacityChanged(int val);

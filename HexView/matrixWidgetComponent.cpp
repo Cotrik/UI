@@ -1,8 +1,11 @@
 #include "matrixWidgetComponent.h"
+#include "SheetDecompositionsDockWidget.h"
+
 #include <QPainter>
 
-matrixWidgetComponent::matrixWidgetComponent(int row, int col, double ratio, QString type, QWidget *parent, Qt::GlobalColor color, QString text) : QWidget(parent) {
+matrixWidgetComponent::matrixWidgetComponent(int row, int col, double ratio, QString type, QMainWindow *MainWindow, QWidget *parent, Qt::GlobalColor color, QString text) : QWidget(parent) {
     this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    mainWindow = MainWindow;
     _row = row;
     _col = col;
     _size = max_size * ratio;
@@ -37,6 +40,20 @@ void matrixWidgetComponent::paintEvent(QPaintEvent* e) {
 
 void matrixWidgetComponent::mousePressEvent(QMouseEvent* e) {
     _fill = !_fill;
+    SheetDecompositionsDockWidget *sheetDecompositionsDockWidget = mainWindow->findChild<SheetDecompositionsDockWidget *>("Sheet DecompositionsDockWidget");
+    if (!sheetDecompositionsDockWidget) {return;}
+    Qt::CheckState state = Qt::Checked;
+    if (_fill) {
+        state = Qt::Unchecked;
+    }
+    int decomposition_id = sheetDecompositionsDockWidget->currentDecompositionId;
+    sheetDecompositionsDockWidget->treeWidget->topLevelItem(decomposition_id)->child(_row-1)->setCheckState(0, state);
+    sheetDecompositionsDockWidget->on_Clicked(sheetDecompositionsDockWidget->treeWidget->topLevelItem(decomposition_id)->child(_row-1), 0);
+    
+    if (_row != _col) {
+        sheetDecompositionsDockWidget->treeWidget->topLevelItem(decomposition_id)->child(_col-1)->setCheckState(0, state);
+        sheetDecompositionsDockWidget->on_Clicked(sheetDecompositionsDockWidget->treeWidget->topLevelItem(decomposition_id)->child(_col-1), 0);
+    }
     update();
     e->accept();
 }
