@@ -1,4 +1,6 @@
 #include "SheetDecompositionsDockWidget.h"
+#include "MatrixDockWidget.h"
+
 #include <QDir>
 #include <QProcess>
 #include <QTreeWidget>
@@ -114,6 +116,8 @@ void SheetDecompositionsDockWidget::setupDockWidget(QMainWindow* &MainWindow, QS
         QComboBox* &DisplayComboBox,
         QWidget* &DockWidgetContents,
         Qt::DockWidgetArea dockWidgetArea) {
+
+    mainWindow = MainWindow;
     Widget = new QWidget;
 //    OpacitySlider = new QSlider(Widget);
 //    OpacitySlider->setObjectName(name + QString::fromUtf8("OpacitySlider"));
@@ -144,7 +148,7 @@ void SheetDecompositionsDockWidget::setupDockWidget(QMainWindow* &MainWindow, QS
     DockWidgetContents = new QWidget();
     DockWidgetContents->setObjectName(name + QString::fromUtf8("DockWidgetContents"));
     this->setWidget(Widget);
-    MainWindow->addDockWidget(dockWidgetArea, this);
+    mainWindow->addDockWidget(dockWidgetArea, this);
 }
 
 void SheetDecompositionsDockWidget::setActors(std::vector<vtkSmartPointer<vtkActor> >* _vtkActors) {
@@ -261,6 +265,10 @@ void SheetDecompositionsDockWidget::on_CurrentItemChanged(QTreeWidgetItem *curre
         if (currentprefix != "sheet") {
             currentDecompositionItem = current;
             on_Clicked(current, 0);
+            MatrixDockWidget *matrixWidget = mainWindow->findChild<MatrixDockWidget *>("MatrixDockWidget");
+            if (matrixWidget) {
+                matrixWidget->loadMatrices(currentid);
+            }
             return;
         } else if (previous != NULL) {
             std::string previousstr = previous->text(0).toStdString();

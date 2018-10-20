@@ -28,6 +28,8 @@
 #include <QTreeWidget>
 #include <QWidget>
 #include <QProgressBar>
+#include <QGridLayout>
+#include <QScrollArea>
 #include "QVTKWidget.h"
 
 #include <vtkNew.h>
@@ -57,11 +59,24 @@ public:
             QDoubleSpinBox* &OpacitySpinBox,
             QComboBox* &DisplayComboBox,
             QWidget* &sheetDockWidgetContents,
+            QGridLayout* &matrixLayout,
+            QScrollArea* &scrollArea,
             Qt::DockWidgetArea dockWidgetArea = Qt::LeftDockWidgetArea);
+    
+    void setFilesPath(QString path);
+    void loadMatrices(int index = 0);
+    std::vector<std::vector<double>> getMatrixFromFile(std::string filename);
+    void setupMatrixLabels(int n_rows, int n_cols);
+    void populateMatrix(int rows, int cols);
+    std::vector<std::vector<double>> adjacentMatrix;
+    std::vector<std::vector<double>> hybridMatrix;
+    std::vector<std::vector<double>> intersectingMatrix;
+    std::vector<std::vector<double>> diagonalMatrix;
+    std::string file_path;
 public:
 
 private:
-
+    QMainWindow *mainWindow;
 public slots:
     virtual void resizeEvent(QResizeEvent *event);
     virtual void on_OpacityChanged(int val);
@@ -75,6 +90,8 @@ public:
     QComboBox *displayComboBox;
     QDockWidget *dockWidget;
     QWidget *dockWidgetContents;
+    QGridLayout *layout;
+    QScrollArea *scrollArea;
     bool isPolyData;
     std::unordered_map<int, int> listid_id;
     int displayCurrentIndex = 0; // Display Surface
