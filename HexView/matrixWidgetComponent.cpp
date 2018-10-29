@@ -8,8 +8,8 @@ matrixWidgetComponent::matrixWidgetComponent(int row, int col, double ratio, QSt
     mainWindow = MainWindow;
     _row = row;
     _col = col;
-    _size = max_size * ratio;
-    _opacity = _opacity * ratio;
+    _size = 5 + (max_size * ratio);
+    _opacity = 0.3 + (_opacity * ratio);
     _color = color;
     _type = type;
     _text = text;

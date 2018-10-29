@@ -18,7 +18,7 @@ class matrixWidgetComponent : public QWidget {
         bool _fill = true;
         Qt::GlobalColor _color;
         QString _type, _text;
-        double max_size = 20, offset = 5, bounding_rect_size = 25, _opacity = 1;
+        double max_size = 15, offset = 5, bounding_rect_size = 25, _opacity = 0.6;
         double _size, _row, _col;
 };
 
